@@ -1,7 +1,12 @@
 use serde_json::{json, Map, Value};
 
-// Re-implement the pure functions here for testing since they're private in main.
-// In a real project these could be in a lib.rs, but keeping main.rs simple for now.
+// Re-implement pure functions here for testing since they're private in main.
+
+fn has_transient_error(errors: &[(Option<&str>, &str)]) -> bool {
+    errors
+        .iter()
+        .any(|(code, _)| code.unwrap_or("").starts_with("Neo.TransientError."))
+}
 
 fn parse_param_value(v: &str) -> Value {
     if v == "true" {
@@ -198,4 +203,37 @@ fn rows_to_records_row_not_array_errors() {
     let fields = vec![json!("x")];
     let values = vec![json!("not an array")];
     assert!(rows_to_records(&fields, &values).is_err());
+}
+
+#[test]
+fn transient_error_detected() {
+    let errors = vec![(
+        Some("Neo.TransientError.Transaction.DeadlockDetected"),
+        "deadlock",
+    )];
+    assert!(has_transient_error(&errors));
+}
+
+#[test]
+fn client_error_not_transient() {
+    let errors = vec![(
+        Some("Neo.ClientError.Statement.SyntaxError"),
+        "syntax error",
+    )];
+    assert!(!has_transient_error(&errors));
+}
+
+#[test]
+fn no_code_not_transient() {
+    let errors = vec![(None, "some error")];
+    assert!(!has_transient_error(&errors));
+}
+
+#[test]
+fn mixed_errors_with_transient() {
+    let errors = vec![
+        (Some("Neo.ClientError.Statement.SyntaxError"), "syntax"),
+        (Some("Neo.TransientError.General.DatabaseUnavailable"), "unavailable"),
+    ];
+    assert!(has_transient_error(&errors));
 }

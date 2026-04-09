@@ -2,6 +2,9 @@ use clap::Parser;
 use serde_json::{Map, Value};
 use std::io::{self, IsTerminal, Read};
 
+const MAX_RETRIES: u32 = 3;
+const INITIAL_BACKOFF_MS: u64 = 200;
+
 #[derive(Parser)]
 #[command(name = "neo4j-query", about = "Query Neo4j databases, output TOON")]
 struct Cli {
@@ -114,7 +117,55 @@ struct ResponseData {
 
 #[derive(serde::Deserialize)]
 struct ResponseError {
+    code: Option<String>,
     message: String,
+}
+
+fn has_transient_error(errors: &[ResponseError]) -> bool {
+    errors
+        .iter()
+        .any(|e| e.code.as_deref().unwrap_or("").starts_with("Neo.TransientError."))
+}
+
+fn format_errors(errors: &[ResponseError]) -> String {
+    errors
+        .iter()
+        .map(|e| match &e.code {
+            Some(code) => format!("[{code}] {}", e.message),
+            None => e.message.clone(),
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+async fn execute_query(
+    client: &reqwest::Client,
+    url: &str,
+    user: &str,
+    password: &str,
+    body: &Value,
+) -> Result<QueryResponse, Box<dyn std::error::Error>> {
+    let resp = client
+        .post(url)
+        .basic_auth(user, Some(password))
+        .json(body)
+        .send()
+        .await?;
+
+    let status = resp.status();
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        if let Ok(parsed) = serde_json::from_str::<QueryResponse>(&text) {
+            if let Some(errors) = &parsed.errors {
+                if !errors.is_empty() {
+                    return Err(format!("HTTP {status}: {}", format_errors(errors)).into());
+                }
+            }
+        }
+        return Err(format!("HTTP {status}: {text}").into());
+    }
+
+    Ok(resp.json().await?)
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -122,53 +173,72 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cypher = resolve_query(cli.query)?;
     let params = parse_params(&cli.p)?;
 
-    let url = format!("{}/db/{}/query/v2", cli.uri.trim_end_matches('/'), cli.database);
+    let url = format!(
+        "{}/db/{}/query/v2",
+        cli.uri.trim_end_matches('/'),
+        cli.database
+    );
 
     let mut body = Map::new();
     body.insert("statement".into(), Value::String(cypher));
     if !params.is_empty() {
         body.insert("parameters".into(), Value::Object(params));
     }
+    let body = Value::Object(body);
 
     let client = reqwest::Client::new();
-    let resp = client
-        .post(&url)
-        .basic_auth(&cli.user, Some(&cli.password))
-        .json(&body)
-        .send()
-        .await?;
 
-    let status = resp.status();
-    if !status.is_success() {
-        let text = resp.text().await.unwrap_or_default();
-        // Try to extract error message from JSON response
-        if let Ok(parsed) = serde_json::from_str::<QueryResponse>(&text) {
-            if let Some(errors) = parsed.errors {
-                if !errors.is_empty() {
-                    let msgs: Vec<&str> = errors.iter().map(|e| e.message.as_str()).collect();
-                    return Err(format!("HTTP {status}: {}", msgs.join("; ")).into());
+    let mut last_err = None;
+    for attempt in 0..=MAX_RETRIES {
+        match execute_query(&client, &url, &cli.user, &cli.password, &body).await {
+            Ok(parsed) => {
+                if let Some(errors) = &parsed.errors {
+                    if !errors.is_empty() {
+                        if has_transient_error(errors) && attempt < MAX_RETRIES {
+                            let backoff = INITIAL_BACKOFF_MS * 2u64.pow(attempt);
+                            eprintln!(
+                                "transient error, retrying in {backoff}ms (attempt {}/{})",
+                                attempt + 1,
+                                MAX_RETRIES
+                            );
+                            tokio::time::sleep(std::time::Duration::from_millis(backoff)).await;
+                            last_err = Some(format_errors(errors));
+                            continue;
+                        }
+                        return Err(format_errors(errors).into());
+                    }
                 }
+
+                let data = parsed.data.ok_or("no data in response")?;
+                let records = rows_to_records(&data.fields, &data.values)?;
+                let toon = toon_format::encode_default(&records)?;
+                print!("{toon}");
+                return Ok(());
+            }
+            Err(e) => {
+                if attempt < MAX_RETRIES {
+                    // Retry on network errors too (connection reset, timeout)
+                    let is_network_err = e.to_string().contains("connection")
+                        || e.to_string().contains("timeout")
+                        || e.to_string().contains("reset");
+                    if is_network_err {
+                        let backoff = INITIAL_BACKOFF_MS * 2u64.pow(attempt);
+                        eprintln!(
+                            "network error, retrying in {backoff}ms (attempt {}/{})",
+                            attempt + 1,
+                            MAX_RETRIES
+                        );
+                        tokio::time::sleep(std::time::Duration::from_millis(backoff)).await;
+                        last_err = Some(e.to_string());
+                        continue;
+                    }
+                }
+                return Err(e);
             }
         }
-        return Err(format!("HTTP {status}: {text}").into());
     }
 
-    let parsed: QueryResponse = resp.json().await?;
-
-    if let Some(errors) = parsed.errors {
-        if !errors.is_empty() {
-            let msgs: Vec<&str> = errors.iter().map(|e| e.message.as_str()).collect();
-            return Err(msgs.join("; ").into());
-        }
-    }
-
-    let data = parsed.data.ok_or("no data in response")?;
-    let records = rows_to_records(&data.fields, &data.values)?;
-
-    let toon = toon_format::encode_default(&records)?;
-    print!("{toon}");
-
-    Ok(())
+    Err(last_err.unwrap_or_else(|| "max retries exceeded".into()).into())
 }
 
 fn main() {
