@@ -1,5 +1,6 @@
 use clap::Parser;
-use serde_json::{Map, Value};
+use serde_json::{json, Map, Value};
+use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
 
 const MAX_RETRIES: u32 = 3;
@@ -8,7 +9,7 @@ const INITIAL_BACKOFF_MS: u64 = 200;
 #[derive(Parser)]
 #[command(name = "neo4j-query", about = "Query Neo4j databases, output TOON")]
 struct Cli {
-    /// Cypher query to execute
+    /// Cypher query to execute (or .schema for schema introspection)
     query: Option<String>,
 
     /// Neo4j HTTP URI
@@ -168,10 +169,168 @@ async fn execute_query(
     Ok(resp.json().await?)
 }
 
+async fn run_cypher(
+    client: &reqwest::Client,
+    url: &str,
+    user: &str,
+    password: &str,
+    cypher: &str,
+) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+    let body = json!({"statement": cypher});
+    let parsed = execute_query(client, url, user, password, &body).await?;
+    if let Some(errors) = &parsed.errors {
+        if !errors.is_empty() {
+            return Err(format_errors(errors).into());
+        }
+    }
+    let data = parsed.data.ok_or("no data in response")?;
+    rows_to_records(&data.fields, &data.values).map_err(|e| e.into())
+}
+
+async fn run_schema(
+    client: &reqwest::Client,
+    url: &str,
+    user: &str,
+    password: &str,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    // 1. Get node labels and properties
+    let node_rows = run_cypher(
+        client,
+        url,
+        user,
+        password,
+        "CALL db.schema.nodeTypeProperties() \
+         YIELD nodeType, nodeLabels, propertyName, propertyTypes, mandatory \
+         RETURN nodeType, nodeLabels, propertyName, propertyTypes, mandatory",
+    )
+    .await?;
+
+    // 2. Get relationship types and properties
+    let rel_rows = run_cypher(
+        client,
+        url,
+        user,
+        password,
+        "CALL db.schema.relTypeProperties() \
+         YIELD relType, propertyName, propertyTypes, mandatory \
+         RETURN relType, propertyName, propertyTypes, mandatory",
+    )
+    .await?;
+
+    // Build node map: label -> { properties: [...] }
+    let mut nodes: HashMap<String, Vec<Value>> = HashMap::new();
+    for row in &node_rows {
+        let labels = row.get("nodeLabels").and_then(|v| v.as_array());
+        let prop_name = row.get("propertyName").and_then(|v| v.as_str());
+        let prop_types = row.get("propertyTypes").and_then(|v| v.as_array());
+        let mandatory = row.get("mandatory").and_then(|v| v.as_bool()).unwrap_or(false);
+
+        if let (Some(labels), Some(prop_name), Some(prop_types)) = (labels, prop_name, prop_types) {
+            // Use sorted joined labels as key
+            let mut label_strs: Vec<&str> = labels.iter().filter_map(|l| l.as_str()).collect();
+            label_strs.sort();
+            let key = label_strs.join(":");
+
+            if !prop_name.is_empty() {
+                let type_strs: Vec<&str> = prop_types.iter().filter_map(|t| t.as_str()).collect();
+                let prop = json!({
+                    "name": prop_name,
+                    "types": type_strs,
+                    "mandatory": mandatory,
+                });
+                nodes.entry(key).or_default().push(prop);
+            } else {
+                nodes.entry(key).or_default();
+            }
+        }
+    }
+
+    // Build rel type -> properties map
+    let mut rel_props: HashMap<String, Vec<Value>> = HashMap::new();
+    let mut rel_types: Vec<String> = Vec::new();
+    for row in &rel_rows {
+        let rel_type = row.get("relType").and_then(|v| v.as_str()).unwrap_or("");
+        let clean_type = rel_type.trim_start_matches(":`").trim_end_matches('`').to_string();
+        let prop_name = row.get("propertyName").and_then(|v| v.as_str());
+        let prop_types = row.get("propertyTypes").and_then(|v| v.as_array());
+        let mandatory = row.get("mandatory").and_then(|v| v.as_bool()).unwrap_or(false);
+
+        if !rel_types.contains(&clean_type) {
+            rel_types.push(clean_type.clone());
+        }
+
+        if let (Some(prop_name), Some(prop_types)) = (prop_name, prop_types) {
+            if !prop_name.is_empty() {
+                let type_strs: Vec<&str> = prop_types.iter().filter_map(|t| t.as_str()).collect();
+                let prop = json!({
+                    "name": prop_name,
+                    "types": type_strs,
+                    "mandatory": mandatory,
+                });
+                rel_props.entry(clean_type).or_default().push(prop);
+            } else {
+                rel_props.entry(clean_type).or_default();
+            }
+        }
+    }
+
+    // 3. For each relationship type, find which node labels it connects
+    let mut relationships: Vec<Value> = Vec::new();
+    for rel_type in &rel_types {
+        let cypher = format!(
+            "MATCH (n)-[r:`{}`]->(m) \
+             WITH DISTINCT labels(n) AS from, labels(m) AS to \
+             RETURN from, to",
+            rel_type.replace('`', "``")
+        );
+        let path_rows = run_cypher(client, url, user, password, &cypher).await?;
+
+        let mut paths: Vec<Value> = Vec::new();
+        for path_row in &path_rows {
+            let from = path_row.get("from").and_then(|v| v.as_array());
+            let to = path_row.get("to").and_then(|v| v.as_array());
+            if let (Some(from), Some(to)) = (from, to) {
+                let mut from_strs: Vec<&str> = from.iter().filter_map(|l| l.as_str()).collect();
+                let mut to_strs: Vec<&str> = to.iter().filter_map(|l| l.as_str()).collect();
+                from_strs.sort();
+                to_strs.sort();
+                paths.push(json!({
+                    "from": from_strs,
+                    "to": to_strs,
+                }));
+            }
+        }
+
+        let props = rel_props.get(rel_type.as_str()).cloned().unwrap_or_default();
+        relationships.push(json!({
+            "type": rel_type,
+            "properties": props,
+            "paths": paths,
+        }));
+    }
+
+    // Build final schema object
+    let mut node_list: Vec<Value> = Vec::new();
+    let mut sorted_keys: Vec<&String> = nodes.keys().collect();
+    sorted_keys.sort();
+    for key in sorted_keys {
+        let props = nodes.get(key.as_str()).unwrap();
+        let labels: Vec<&str> = key.split(':').collect();
+        node_list.push(json!({
+            "labels": labels,
+            "properties": props,
+        }));
+    }
+
+    Ok(json!({
+        "nodes": node_list,
+        "relationships": relationships,
+    }))
+}
+
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    let cypher = resolve_query(cli.query)?;
-    let params = parse_params(&cli.p)?;
+    let input = resolve_query(cli.query)?;
 
     let url = format!(
         "{}/db/{}/query/v2",
@@ -179,14 +338,24 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         cli.database
     );
 
+    let client = reqwest::Client::new();
+
+    // Handle built-in commands
+    if input.trim() == ".schema" {
+        let schema = run_schema(&client, &url, &cli.user, &cli.password).await?;
+        let toon = toon_format::encode_default(&schema)?;
+        print!("{toon}");
+        return Ok(());
+    }
+
+    let params = parse_params(&cli.p)?;
+
     let mut body = Map::new();
-    body.insert("statement".into(), Value::String(cypher));
+    body.insert("statement".into(), Value::String(input));
     if !params.is_empty() {
         body.insert("parameters".into(), Value::Object(params));
     }
     let body = Value::Object(body);
-
-    let client = reqwest::Client::new();
 
     let mut last_err = None;
     for attempt in 0..=MAX_RETRIES {
@@ -217,7 +386,6 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => {
                 if attempt < MAX_RETRIES {
-                    // Retry on network errors too (connection reset, timeout)
                     let is_network_err = e.to_string().contains("connection")
                         || e.to_string().contains("timeout")
                         || e.to_string().contains("reset");
@@ -238,7 +406,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    Err(last_err.unwrap_or_else(|| "max retries exceeded".into()).into())
+    Err(last_err
+        .unwrap_or_else(|| "max retries exceeded".into())
+        .into())
 }
 
 fn main() {

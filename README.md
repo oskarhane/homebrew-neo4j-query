@@ -28,6 +28,9 @@ echo "MATCH (n) RETURN n LIMIT 5" | neo4j-query
 
 # With parameters
 neo4j-query -p name=Alice "MATCH (n:Person {name: \$name}) RETURN n"
+
+# Schema introspection
+neo4j-query .schema
 ```
 
 ## Configuration
@@ -47,6 +50,12 @@ export NEO4J_URI="http://localhost:7474"
 export NEO4J_USER="neo4j"
 export NEO4J_PASSWORD="your-password"
 ```
+
+## Built-in Commands
+
+| Command    | Description |
+|------------|-------------|
+| `.schema`  | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), and connection paths |
 
 ## Output
 

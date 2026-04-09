@@ -42,10 +42,17 @@ If the user provides a Cypher query as $ARGUMENTS, run it directly:
 neo4j-query "$ARGUMENTS"
 ```
 
+## Schema introspection
+
+Use `.schema` to get the full database schema (node labels, relationship types, properties, paths):
+```bash
+neo4j-query .schema
+```
+
+This returns a structured TOON object with `nodes` and `relationships`, including property types and which labels are connected by each relationship type. Always run this first when exploring an unfamiliar database.
+
 ## Tips
 
-- Always use `LIMIT` for exploratory queries to avoid large result sets
+- Always run `neo4j-query .schema` first to understand the database structure
+- Use `LIMIT` for exploratory queries to avoid large result sets
 - Use parameters (`-p`) for dynamic values instead of string interpolation
-- Start with schema exploration: `neo4j-query "CALL db.schema.visualization()"`
-- List labels: `neo4j-query "CALL db.labels()"`
-- List relationship types: `neo4j-query "CALL db.relationshipTypes()"`

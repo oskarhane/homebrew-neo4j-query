@@ -233,6 +233,42 @@ fn multiple_columns() {
 
 #[test]
 #[ignore]
+fn schema_command() {
+    if !neo4j_available() {
+        return;
+    }
+    // seed data
+    cmd()
+        .arg("CREATE (a:SchemaTest {x: 1})-[:SCHEMA_REL {y: 'hi'}]->(b:SchemaTarget {z: true})")
+        .assert()
+        .success();
+
+    cmd()
+        .arg(".schema")
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("SchemaTest")
+                .and(predicate::str::contains("SchemaTarget"))
+                .and(predicate::str::contains("SCHEMA_REL"))
+                .and(predicate::str::contains("nodes"))
+                .and(predicate::str::contains("relationships"))
+                .and(predicate::str::contains("properties")),
+        );
+
+    // cleanup
+    cmd()
+        .arg("MATCH (n:SchemaTest) DETACH DELETE n")
+        .assert()
+        .success();
+    cmd()
+        .arg("MATCH (n:SchemaTarget) DELETE n")
+        .assert()
+        .success();
+}
+
+#[test]
+#[ignore]
 fn multiple_rows() {
     if !neo4j_available() {
         return;
