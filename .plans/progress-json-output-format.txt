@@ -15,3 +15,21 @@ Key Decisions:
 - Used #[derive(Clone, Debug, ValueEnum)] — Clone required by clap, Debug for convenience
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Branch output on format enum for Cypher queries
+Date: 2026-04-09T19:30:00Z
+================================================================================
+
+Summary:
+Added match on cli.output_format in run() to branch between serde_json::to_string
+(Json) and toon_format::encode_default (Toon). Schema path untouched — always TOON.
+
+Files Changed:
+- src/main.rs (modified: match on OutputFormat enum for record serialization)
+- src/main.rs, tests/integration.rs, tests/unit.rs (reformatted by cargo fmt)
+
+Key Decisions:
+- Used serde_json::to_string (not to_string_pretty) for compact JSON output
+
+Next Task: task-003

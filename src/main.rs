@@ -63,7 +63,10 @@ fn resolve_query(arg: Option<String>) -> Result<String, String> {
         }
         return Ok(trimmed);
     }
-    Err("no query provided. Usage: neo4j-query \"CYPHER QUERY\" or echo \"QUERY\" | neo4j-query".into())
+    Err(
+        "no query provided. Usage: neo4j-query \"CYPHER QUERY\" or echo \"QUERY\" | neo4j-query"
+            .into(),
+    )
 }
 
 fn parse_param_value(v: &str) -> Value {
@@ -101,7 +104,10 @@ fn parse_params(pairs: &[String]) -> Result<Map<String, Value>, String> {
 fn rows_to_records(fields: &[Value], values: &[Value]) -> Result<Vec<Value>, String> {
     let field_names: Vec<&str> = fields
         .iter()
-        .map(|f| f.as_str().ok_or_else(|| "field name is not a string".to_string()))
+        .map(|f| {
+            f.as_str()
+                .ok_or_else(|| "field name is not a string".to_string())
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     values
@@ -138,9 +144,12 @@ struct ResponseError {
 }
 
 fn has_transient_error(errors: &[ResponseError]) -> bool {
-    errors
-        .iter()
-        .any(|e| e.code.as_deref().unwrap_or("").starts_with("Neo.TransientError."))
+    errors.iter().any(|e| {
+        e.code
+            .as_deref()
+            .unwrap_or("")
+            .starts_with("Neo.TransientError.")
+    })
 }
 
 fn format_errors(errors: &[ResponseError]) -> String {
@@ -238,7 +247,10 @@ async fn run_schema(
         let labels = row.get("nodeLabels").and_then(|v| v.as_array());
         let prop_name = row.get("propertyName").and_then(|v| v.as_str());
         let prop_types = row.get("propertyTypes").and_then(|v| v.as_array());
-        let mandatory = row.get("mandatory").and_then(|v| v.as_bool()).unwrap_or(false);
+        let mandatory = row
+            .get("mandatory")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         if let (Some(labels), Some(prop_name), Some(prop_types)) = (labels, prop_name, prop_types) {
             // Use sorted joined labels as key
@@ -265,10 +277,16 @@ async fn run_schema(
     let mut rel_types: Vec<String> = Vec::new();
     for row in &rel_rows {
         let rel_type = row.get("relType").and_then(|v| v.as_str()).unwrap_or("");
-        let clean_type = rel_type.trim_start_matches(":`").trim_end_matches('`').to_string();
+        let clean_type = rel_type
+            .trim_start_matches(":`")
+            .trim_end_matches('`')
+            .to_string();
         let prop_name = row.get("propertyName").and_then(|v| v.as_str());
         let prop_types = row.get("propertyTypes").and_then(|v| v.as_array());
-        let mandatory = row.get("mandatory").and_then(|v| v.as_bool()).unwrap_or(false);
+        let mandatory = row
+            .get("mandatory")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         if !rel_types.contains(&clean_type) {
             rel_types.push(clean_type.clone());
@@ -316,7 +334,10 @@ async fn run_schema(
             }
         }
 
-        let props = rel_props.get(rel_type.as_str()).cloned().unwrap_or_default();
+        let props = rel_props
+            .get(rel_type.as_str())
+            .cloned()
+            .unwrap_or_default();
         relationships.push(json!({
             "type": rel_type,
             "properties": props,
@@ -420,8 +441,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 let data = parsed.data.ok_or("no data in response")?;
                 let records = rows_to_records(&data.fields, &data.values)?;
-                let toon = toon_format::encode_default(&records)?;
-                println!("{toon}");
+                let output = match cli.output_format {
+                    OutputFormat::Json => serde_json::to_string(&records)?,
+                    OutputFormat::Toon => toon_format::encode_default(&records)?,
+                };
+                println!("{output}");
                 return Ok(());
             }
             Err(e) => {

@@ -25,7 +25,7 @@ tasks:
       In the run() function, use the parsed output_format to decide serialization. When Json,
       call serde_json::to_string on the records vec instead of toon_format::encode_default.
       The .schema path must remain unchanged — always TOON regardless of flag.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -33,7 +33,7 @@ tasks:
       - "--output-format json outputs a valid JSON array of record objects"
       - ".schema always outputs TOON even with --output-format json"
       - "cargo build succeeds with no new dependencies"
-    completed_at: null
+    completed_at: 2026-04-09T19:30:00Z
 
   - id: task-003
     title: "Add integration tests for JSON output"

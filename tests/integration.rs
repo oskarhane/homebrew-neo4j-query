@@ -53,10 +53,7 @@ fn create_and_match_node() {
         .stdout(predicate::str::contains("hello"));
 
     // cleanup
-    cmd()
-        .arg("MATCH (t:TestInteg) DELETE t")
-        .assert()
-        .success();
+    cmd().arg("MATCH (t:TestInteg) DELETE t").assert().success();
 }
 
 #[test]
@@ -131,10 +128,7 @@ fn write_only_no_return() {
     if !neo4j_available() {
         return;
     }
-    cmd()
-        .arg("CREATE (n:WriteTest {v: 1})")
-        .assert()
-        .success();
+    cmd().arg("CREATE (n:WriteTest {v: 1})").assert().success();
     // cleanup
     cmd().arg("MATCH (n:WriteTest) DELETE n").assert().success();
 }
@@ -229,7 +223,11 @@ fn multiple_columns() {
         .arg("RETURN 'a' as x, 'b' as y, 'c' as z")
         .assert()
         .success()
-        .stdout(predicate::str::contains("x").and(predicate::str::contains("y")).and(predicate::str::contains("z")));
+        .stdout(
+            predicate::str::contains("x")
+                .and(predicate::str::contains("y"))
+                .and(predicate::str::contains("z")),
+        );
 }
 
 #[test]
@@ -244,18 +242,14 @@ fn schema_command() {
         .assert()
         .success();
 
-    cmd()
-        .arg(".schema")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("SchemaTest")
-                .and(predicate::str::contains("SchemaTarget"))
-                .and(predicate::str::contains("SCHEMA_REL"))
-                .and(predicate::str::contains("nodes"))
-                .and(predicate::str::contains("relationships"))
-                .and(predicate::str::contains("properties")),
-        );
+    cmd().arg(".schema").assert().success().stdout(
+        predicate::str::contains("SchemaTest")
+            .and(predicate::str::contains("SchemaTarget"))
+            .and(predicate::str::contains("SCHEMA_REL"))
+            .and(predicate::str::contains("nodes"))
+            .and(predicate::str::contains("relationships"))
+            .and(predicate::str::contains("properties")),
+    );
 
     // cleanup
     cmd()
@@ -278,7 +272,11 @@ fn multiple_rows() {
         .arg("UNWIND range(1,3) AS i RETURN i")
         .assert()
         .success()
-        .stdout(predicate::str::contains("1").and(predicate::str::contains("2")).and(predicate::str::contains("3")));
+        .stdout(
+            predicate::str::contains("1")
+                .and(predicate::str::contains("2"))
+                .and(predicate::str::contains("3")),
+        );
 }
 
 #[test]
