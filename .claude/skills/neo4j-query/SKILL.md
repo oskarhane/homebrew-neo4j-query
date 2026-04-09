@@ -18,9 +18,9 @@ Query Neo4j databases using `neo4j-query`. Output is in TOON format (compact, to
 - `NEO4J_PASSWORD` — password (required)
 - `NEO4J_DATABASE` — database name (default: `neo4j`)
 
-## CRITICAL: Always fetch schema first
+## CRITICAL: Fetch schema before generating Cypher
 
-**Before writing ANY Cypher query, ALWAYS run `.schema` first** to understand the database structure. Do not guess label names, relationship types, or property names — get them from the schema.
+**Before generating ANY Cypher yourself, ALWAYS run `.schema` first** to understand the database structure. Do not guess label names, relationship types, or property names — get them from the schema. If the user provides a Cypher query directly, just execute it — no need to fetch schema first.
 
 ```bash
 neo4j-query .schema
@@ -87,14 +87,16 @@ If the user provides a Cypher query as $ARGUMENTS, run it directly:
 neo4j-query "$ARGUMENTS"
 ```
 
-If the user asks a question about the data or asks you to explore/query without providing Cypher:
+If the user asks a question about the data or asks you to explore/query **without providing Cypher**:
 1. Run `neo4j-query .schema` first
 2. Use the schema to write the correct Cypher query
 3. Run the query
 
+If the user provides a specific Cypher query, run it directly — don't fetch schema first.
+
 ## Tips
 
-- Always run `neo4j-query .schema` first — never assume you know the schema
+- Run `neo4j-query .schema` before generating Cypher — never assume you know the schema
 - Use `LIMIT` for exploratory queries to avoid large result sets
 - Use parameters (`-p`) for dynamic values instead of string interpolation
 - Relationship directions matter — check `paths.from` and `paths.to` in the schema output
