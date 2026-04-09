@@ -1,6 +1,6 @@
 # neo4j-query
 
-Query Neo4j databases from the command line. Outputs results in [TOON](https://github.com/toon-format/toon-rust) format.
+A fast, lightweight, non-interactive CLI for querying Neo4j — built for AI agents and humans alike.
 
 ## Setup
 
@@ -39,28 +39,27 @@ Then use `/neo4j-query` in Claude Code to query Neo4j. The skill automatically r
 
 ### 3. Set credentials
 
-Via a `.env` file (recommended):
+Quickest way — pass directly:
 
 ```sh
-# Create a .env file in your project directory
-echo 'NEO4J_URI=http://localhost:7474
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your-password' > .env
+neo4j-query --uri http://localhost:7474 --user neo4j --password secret "RETURN 1"
 ```
 
-The tool automatically discovers `.env` files by searching from the current directory upward. You can also specify one explicitly:
+Or point to an env file:
 
 ```sh
 neo4j-query --env /path/to/credentials.env "RETURN 1"
 ```
 
-Or via shell environment variables:
+For repeated use, create a `.env` file in your project directory (auto-discovered):
 
 ```sh
-export NEO4J_URI="http://localhost:7474"
-export NEO4J_USER="neo4j"
-export NEO4J_PASSWORD="your-password"
+echo 'NEO4J_URI=http://localhost:7474
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password' > .env
 ```
+
+Shell environment variables (`NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`) also work.
 
 ## Usage
 
@@ -117,6 +116,23 @@ docker compose -f tests/docker-compose.yml up -d
 cargo test -- --ignored
 docker compose -f tests/docker-compose.yml down
 ```
+
+## Benchmarks
+
+Results from the recommendations dataset:
+
+| Query | JSON tokens | TOON tokens | Token % |
+|-------|------------|------------|--------|
+| single_row | 14 | 15 | -7.1% |
+| genre_names_5 | 30 | 22 | 26.7% |
+| movies_3col_50 | 1,165 | 667 | 42.7% |
+| movies_10col_50 | 3,700 | 1,698 | 54.1% |
+| movies_4col_500 | 14,300 | 7,765 | 45.7% |
+| movies_arrays_50 | 1,413 | 1,855 | -31.3% |
+| acted_in_200 | 3,172 | 2,112 | 33.4% |
+| ratings_100 | 2,333 | 1,318 | 43.5% |
+
+TOON saves **40-55% tokens** on tabular data. Array-heavy results use TOON's non-tabular encoding which can be larger than JSON.
 
 ## License
 
