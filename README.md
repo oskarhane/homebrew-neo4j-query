@@ -14,6 +14,8 @@ brew install neo4j-query
 ### From source
 
 ```sh
+git clone https://github.com/oskarhane/homebrew-neo4j-query.git
+cd homebrew-neo4j-query
 cargo install --path .
 ```
 

@@ -171,6 +171,5 @@ end
 5. Manual: `echo "RETURN 1 as n" | NEO4J_PASSWORD=test ./target/debug/neo4j-query`
 
 ## Resolved
-- Repo: `https://github.com/oskarhane/neo4j-query.git`
+- Repo: `https://github.com/oskarhane/homebrew-neo4j-query.git` (single repo for source + homebrew tap)
 - License: MIT
-- Homebrew tap repo: `oskarhane/homebrew-neo4j-query` (separate, documented in README)
