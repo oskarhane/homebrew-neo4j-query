@@ -1,0 +1,72 @@
+================================================================================
+TASK-001: Add OutputFormat enum and --output-format CLI flag
+Date: 2026-04-09T19:15:00Z
+================================================================================
+
+Summary:
+Added OutputFormat enum (Toon, Json) with clap ValueEnum derive and --output-format
+CLI flag to Cli struct with default "toon". Invalid values produce standard clap error.
+
+Files Changed:
+- src/main.rs (modified: added OutputFormat enum, ValueEnum import, --output-format field)
+
+Key Decisions:
+- Placed enum before constants at top of file for visibility
+- Used #[derive(Clone, Debug, ValueEnum)] — Clone required by clap, Debug for convenience
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Branch output on format enum for Cypher queries
+Date: 2026-04-09T19:30:00Z
+================================================================================
+
+Summary:
+Added match on cli.output_format in run() to branch between serde_json::to_string
+(Json) and toon_format::encode_default (Toon). Schema path untouched — always TOON.
+
+Files Changed:
+- src/main.rs (modified: match on OutputFormat enum for record serialization)
+- src/main.rs, tests/integration.rs, tests/unit.rs (reformatted by cargo fmt)
+
+Key Decisions:
+- Used serde_json::to_string (not to_string_pretty) for compact JSON output
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Add integration tests for JSON output
+Date: 2026-04-09T19:45:00Z
+================================================================================
+
+Summary:
+Added 5 integration tests for --output-format json: literal return, multi-column,
+params, null values, empty result set. All parse stdout as JSON and assert on values.
+
+Files Changed:
+- tests/integration.rs (modified: added serde_json::Value import, 5 new #[ignore] tests)
+
+Key Decisions:
+- Used .output() instead of .assert() to capture stdout for JSON deserialization
+- All tests follow existing pattern: neo4j_available() guard, cmd() helper
+
+Next Task: task-004
+
+================================================================================
+TASK-004: Update README.md and SKILL.md documentation
+Date: 2026-04-09T20:00:00Z
+================================================================================
+
+Summary:
+Added --output-format to README Configuration table and brief JSON mention in Output
+section. Added tip about --output-format json in SKILL.md. TOON remains primary format.
+
+Files Changed:
+- README.md (modified: config table row, output section sentence)
+- .claude/skills/neo4j-query/SKILL.md (modified: added tip bullet)
+
+Key Decisions:
+- Kept JSON mentions minimal — one table row, one sentence, one tip bullet
+- No new examples using JSON to keep TOON as the recommended default
+
+All tasks complete.

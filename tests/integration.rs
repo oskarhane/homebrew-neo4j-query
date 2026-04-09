@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use serde_json::Value;
 use std::io::Write;
 
 fn neo4j_available() -> bool {
@@ -53,10 +54,7 @@ fn create_and_match_node() {
         .stdout(predicate::str::contains("hello"));
 
     // cleanup
-    cmd()
-        .arg("MATCH (t:TestInteg) DELETE t")
-        .assert()
-        .success();
+    cmd().arg("MATCH (t:TestInteg) DELETE t").assert().success();
 }
 
 #[test]
@@ -131,10 +129,7 @@ fn write_only_no_return() {
     if !neo4j_available() {
         return;
     }
-    cmd()
-        .arg("CREATE (n:WriteTest {v: 1})")
-        .assert()
-        .success();
+    cmd().arg("CREATE (n:WriteTest {v: 1})").assert().success();
     // cleanup
     cmd().arg("MATCH (n:WriteTest) DELETE n").assert().success();
 }
@@ -229,7 +224,11 @@ fn multiple_columns() {
         .arg("RETURN 'a' as x, 'b' as y, 'c' as z")
         .assert()
         .success()
-        .stdout(predicate::str::contains("x").and(predicate::str::contains("y")).and(predicate::str::contains("z")));
+        .stdout(
+            predicate::str::contains("x")
+                .and(predicate::str::contains("y"))
+                .and(predicate::str::contains("z")),
+        );
 }
 
 #[test]
@@ -244,18 +243,14 @@ fn schema_command() {
         .assert()
         .success();
 
-    cmd()
-        .arg(".schema")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("SchemaTest")
-                .and(predicate::str::contains("SchemaTarget"))
-                .and(predicate::str::contains("SCHEMA_REL"))
-                .and(predicate::str::contains("nodes"))
-                .and(predicate::str::contains("relationships"))
-                .and(predicate::str::contains("properties")),
-        );
+    cmd().arg(".schema").assert().success().stdout(
+        predicate::str::contains("SchemaTest")
+            .and(predicate::str::contains("SchemaTarget"))
+            .and(predicate::str::contains("SCHEMA_REL"))
+            .and(predicate::str::contains("nodes"))
+            .and(predicate::str::contains("relationships"))
+            .and(predicate::str::contains("properties")),
+    );
 
     // cleanup
     cmd()
@@ -278,7 +273,11 @@ fn multiple_rows() {
         .arg("UNWIND range(1,3) AS i RETURN i")
         .assert()
         .success()
-        .stdout(predicate::str::contains("1").and(predicate::str::contains("2")).and(predicate::str::contains("3")));
+        .stdout(
+            predicate::str::contains("1")
+                .and(predicate::str::contains("2"))
+                .and(predicate::str::contains("3")),
+        );
 }
 
 #[test]
@@ -365,4 +364,101 @@ fn dotenv_auto_discovery() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("password").not());
+}
+
+// --- JSON output format tests ---
+
+#[test]
+#[ignore]
+fn json_return_literal() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args(["--output-format", "json", "RETURN 1 as n"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["n"], 1);
+}
+
+#[test]
+#[ignore]
+fn json_multi_column() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args([
+            "--output-format",
+            "json",
+            "RETURN 'a' as x, 'b' as y, 'c' as z",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["x"], "a");
+    assert_eq!(parsed[0]["y"], "b");
+    assert_eq!(parsed[0]["z"], "c");
+}
+
+#[test]
+#[ignore]
+fn json_with_params() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args(["--output-format", "json", "-p", "x=42", "RETURN $x as val"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["val"], 42);
+}
+
+#[test]
+#[ignore]
+fn json_null_values() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args(["--output-format", "json", "RETURN null as x, 1 as y"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert!(parsed[0]["x"].is_null());
+    assert_eq!(parsed[0]["y"], 1);
+}
+
+#[test]
+#[ignore]
+fn json_empty_result_set() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args([
+            "--output-format",
+            "json",
+            "MATCH (n:DoesNotExist99999) RETURN n",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert!(parsed.is_empty());
 }

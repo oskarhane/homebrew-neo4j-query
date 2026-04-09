@@ -1,0 +1,69 @@
+feature: json-output-format
+prd: ./prd-json-output-format.md
+created_at: 2026-04-09T19:00:00Z
+updated_at: 2026-04-09T19:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Add OutputFormat enum and --output-format CLI flag"
+    description: |
+      Add an OutputFormat enum with Toon and Json variants, deriving clap::ValueEnum for
+      case-insensitive parsing. Add --output-format field to the Cli struct with default_value
+      "toon". Invalid values should produce a standard clap error. No short flag needed.
+    status: completed
+    dependencies: []
+    acceptance_criteria:
+      - "OutputFormat enum with Toon and Json variants exists with ValueEnum derive"
+      - "--output-format flag parses toon and json (case-insensitive)"
+      - "Default is toon when flag is omitted"
+      - "Invalid values like xml produce a clap error"
+    completed_at: 2026-04-09T19:15:00Z
+
+  - id: task-002
+    title: "Branch output on format enum for Cypher queries"
+    description: |
+      In the run() function, use the parsed output_format to decide serialization. When Json,
+      call serde_json::to_string on the records vec instead of toon_format::encode_default.
+      The .schema path must remain unchanged — always TOON regardless of flag.
+    status: completed
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "TOON output unchanged when --output-format is omitted or set to toon"
+      - "--output-format json outputs a valid JSON array of record objects"
+      - ".schema always outputs TOON even with --output-format json"
+      - "cargo build succeeds with no new dependencies"
+    completed_at: 2026-04-09T19:30:00Z
+
+  - id: task-003
+    title: "Add integration tests for JSON output"
+    description: |
+      Add integration tests in tests/integration.rs covering --output-format json with real
+      Neo4j: literal return, multi-column, params, null values, and empty result set. Tests
+      should validate the output is parseable JSON. Mark tests #[ignore] like existing ones.
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Integration test for --output-format json with RETURN literal, validates JSON parse"
+      - "Integration test for multi-column JSON output"
+      - "Integration test for JSON output with params"
+      - "Integration test for JSON output with null values"
+      - "Integration test for JSON output with empty result set"
+    completed_at: 2026-04-09T19:45:00Z
+
+  - id: task-004
+    title: "Update README.md and SKILL.md documentation"
+    description: |
+      Add --output-format to the Configuration table in README.md and a brief note in the
+      Output section. Update SKILL.md to mention --output-format json exists. Keep changes
+      minimal — TOON is the primary recommended format in all docs and examples.
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "README.md Configuration table includes --output-format with toon default"
+      - "README.md Output section briefly mentions JSON as alternative"
+      - "SKILL.md mentions --output-format json without changing existing examples"
+      - "TOON remains the primary/recommended format in all documentation"
+    completed_at: 2026-04-09T20:00:00Z

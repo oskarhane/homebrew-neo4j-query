@@ -43,7 +43,10 @@ fn parse_params(pairs: &[String]) -> Result<Map<String, Value>, String> {
 fn rows_to_records(fields: &[Value], values: &[Value]) -> Result<Vec<Value>, String> {
     let field_names: Vec<&str> = fields
         .iter()
-        .map(|f| f.as_str().ok_or_else(|| "field name is not a string".to_string()))
+        .map(|f| {
+            f.as_str()
+                .ok_or_else(|| "field name is not a string".to_string())
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     values
@@ -233,7 +236,10 @@ fn no_code_not_transient() {
 fn mixed_errors_with_transient() {
     let errors = vec![
         (Some("Neo.ClientError.Statement.SyntaxError"), "syntax"),
-        (Some("Neo.TransientError.General.DatabaseUnavailable"), "unavailable"),
+        (
+            Some("Neo.TransientError.General.DatabaseUnavailable"),
+            "unavailable",
+        ),
     ];
     assert!(has_transient_error(&errors));
 }
