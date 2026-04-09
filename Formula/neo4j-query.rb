@@ -1,28 +1,28 @@
 class Neo4jQuery < Formula
   desc "Query Neo4j databases, output TOON"
   homepage "https://github.com/oskarhane/homebrew-neo4j-query"
-  version "0.1.0"
+  version "0.2.0"
   license "MIT"
 
   on_macos do
     on_arm do
       url "https://github.com/oskarhane/homebrew-neo4j-query/releases/download/v#{version}/neo4j-query-aarch64-apple-darwin.tar.gz"
-      sha256 "302b8207882ae92a59ce9e9c8e0b83fe08505b91b2cceeb03d2392406df2d15c"
+      sha256 "3fc27bed782a716e74ceec8eeca3891767cdaa9fc54f15b7adb193a2c5f3fd0f"
     end
     on_intel do
       url "https://github.com/oskarhane/homebrew-neo4j-query/releases/download/v#{version}/neo4j-query-x86_64-apple-darwin.tar.gz"
-      sha256 "41b4952d32d8536fd5841058a55b5570e62d2e4317a9cb5e06cf8794bbe4687f"
+      sha256 "661c42dcae34b4732c180fc31452006330223ad63ef2f17b2662ae04200a7732"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/oskarhane/homebrew-neo4j-query/releases/download/v#{version}/neo4j-query-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "a32700849512a8a8d510bd712891d2fc8df6ec49848ae6c8cb3765f96a8f7333"
+      sha256 "31d74c2575fe7f59e579f4c251597a5c746891b08407bfaf44ac6b210afa9628"
     end
     on_intel do
       url "https://github.com/oskarhane/homebrew-neo4j-query/releases/download/v#{version}/neo4j-query-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "590d519987c25b349f568f0f1fdbbccc9416697f52d775ecbbcfbc4bf851898c"
+      sha256 "5183da1ccb0cd218a2a789f34f69a9eade4adcf1b91b75eca3d31e147d1068e6"
     end
   end
 
