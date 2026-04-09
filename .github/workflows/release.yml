@@ -78,3 +78,62 @@ jobs:
             --title "${{ github.ref_name }}" \
             --generate-notes \
             artifacts/*.tar.gz
+
+  update-formula:
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Update formula
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          SHA_DARWIN_ARM=$(shasum -a 256 artifacts/neo4j-query-aarch64-apple-darwin.tar.gz | awk '{print $1}')
+          SHA_DARWIN_X86=$(shasum -a 256 artifacts/neo4j-query-x86_64-apple-darwin.tar.gz | awk '{print $1}')
+          SHA_LINUX_ARM=$(shasum -a 256 artifacts/neo4j-query-aarch64-unknown-linux-gnu.tar.gz | awk '{print $1}')
+          SHA_LINUX_X86=$(shasum -a 256 artifacts/neo4j-query-x86_64-unknown-linux-gnu.tar.gz | awk '{print $1}')
+
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/neo4j-query.rb
+
+          # Replace SHA256 placeholders in order of appearance
+          python3 -c "
+          import re
+          with open('Formula/neo4j-query.rb') as f:
+              content = f.read()
+
+          shas = [
+              '${SHA_DARWIN_ARM}',
+              '${SHA_DARWIN_X86}',
+              '${SHA_LINUX_ARM}',
+              '${SHA_LINUX_X86}',
+          ]
+          i = 0
+          def replace_sha(m):
+              global i
+              s = shas[i]
+              i += 1
+              return f'sha256 \"{s}\"'
+          content = re.sub(r'sha256 \"[^\"]*\"', replace_sha, content, count=4)
+          with open('Formula/neo4j-query.rb', 'w') as f:
+              f.write(content)
+          "
+
+      - name: Commit and push formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/neo4j-query.rb
+          git commit -m "update formula to ${GITHUB_REF_NAME}"
+          git push
