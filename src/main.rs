@@ -344,7 +344,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     if input.trim() == ".schema" {
         let schema = run_schema(&client, &url, &cli.user, &cli.password).await?;
         let toon = toon_format::encode_default(&schema)?;
-        print!("{toon}");
+        println!("{toon}");
         return Ok(());
     }
 
@@ -381,7 +381,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let data = parsed.data.ok_or("no data in response")?;
                 let records = rows_to_records(&data.fields, &data.values)?;
                 let toon = toon_format::encode_default(&records)?;
-                print!("{toon}");
+                println!("{toon}");
                 return Ok(());
             }
             Err(e) => {
