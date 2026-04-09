@@ -41,7 +41,7 @@ tasks:
       Add integration tests in tests/integration.rs covering --output-format json with real
       Neo4j: literal return, multi-column, params, null values, and empty result set. Tests
       should validate the output is parseable JSON. Mark tests #[ignore] like existing ones.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -50,7 +50,7 @@ tasks:
       - "Integration test for JSON output with params"
       - "Integration test for JSON output with null values"
       - "Integration test for JSON output with empty result set"
-    completed_at: null
+    completed_at: 2026-04-09T19:45:00Z
 
   - id: task-004
     title: "Update README.md and SKILL.md documentation"

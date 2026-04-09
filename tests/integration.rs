@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use serde_json::Value;
 use std::io::Write;
 
 fn neo4j_available() -> bool {
@@ -363,4 +364,101 @@ fn dotenv_auto_discovery() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("password").not());
+}
+
+// --- JSON output format tests ---
+
+#[test]
+#[ignore]
+fn json_return_literal() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args(["--output-format", "json", "RETURN 1 as n"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["n"], 1);
+}
+
+#[test]
+#[ignore]
+fn json_multi_column() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args([
+            "--output-format",
+            "json",
+            "RETURN 'a' as x, 'b' as y, 'c' as z",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["x"], "a");
+    assert_eq!(parsed[0]["y"], "b");
+    assert_eq!(parsed[0]["z"], "c");
+}
+
+#[test]
+#[ignore]
+fn json_with_params() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args(["--output-format", "json", "-p", "x=42", "RETURN $x as val"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["val"], 42);
+}
+
+#[test]
+#[ignore]
+fn json_null_values() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args(["--output-format", "json", "RETURN null as x, 1 as y"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert!(parsed[0]["x"].is_null());
+    assert_eq!(parsed[0]["y"], 1);
+}
+
+#[test]
+#[ignore]
+fn json_empty_result_set() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args([
+            "--output-format",
+            "json",
+            "MATCH (n:DoesNotExist99999) RETURN n",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert!(parsed.is_empty());
 }

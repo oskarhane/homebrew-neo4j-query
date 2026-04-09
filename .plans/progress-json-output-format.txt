@@ -33,3 +33,21 @@ Key Decisions:
 - Used serde_json::to_string (not to_string_pretty) for compact JSON output
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Add integration tests for JSON output
+Date: 2026-04-09T19:45:00Z
+================================================================================
+
+Summary:
+Added 5 integration tests for --output-format json: literal return, multi-column,
+params, null values, empty result set. All parse stdout as JSON and assert on values.
+
+Files Changed:
+- tests/integration.rs (modified: added serde_json::Value import, 5 new #[ignore] tests)
+
+Key Decisions:
+- Used .output() instead of .assert() to capture stdout for JSON deserialization
+- All tests follow existing pattern: neo4j_available() guard, cmd() helper
+
+Next Task: task-004
