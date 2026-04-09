@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/oskarhane/homebrew-neo4j-query"
 
 [dependencies]
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 toon-format = "0.4"
 tokio = { version = "1", features = ["rt", "macros"] }
 clap = { version = "4", features = ["derive", "env"] }
