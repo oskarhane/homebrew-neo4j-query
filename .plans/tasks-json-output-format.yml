@@ -58,7 +58,7 @@ tasks:
       Add --output-format to the Configuration table in README.md and a brief note in the
       Output section. Update SKILL.md to mention --output-format json exists. Keep changes
       minimal — TOON is the primary recommended format in all docs and examples.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -66,4 +66,4 @@ tasks:
       - "README.md Output section briefly mentions JSON as alternative"
       - "SKILL.md mentions --output-format json without changing existing examples"
       - "TOON remains the primary/recommended format in all documentation"
-    completed_at: null
+    completed_at: 2026-04-09T20:00:00Z

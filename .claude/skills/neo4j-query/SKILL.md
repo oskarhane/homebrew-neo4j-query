@@ -101,3 +101,4 @@ If the user provides a specific Cypher query, run it directly — don't fetch sc
 - Use parameters (`-p`) for dynamic values instead of string interpolation
 - Relationship directions matter — check `paths.from` and `paths.to` in the schema output
 - Property types from the schema tell you whether to use string vs numeric comparisons
+- Use `--output-format json` if you need JSON output instead of TOON

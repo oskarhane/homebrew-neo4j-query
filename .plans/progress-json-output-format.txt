@@ -51,3 +51,22 @@ Key Decisions:
 - All tests follow existing pattern: neo4j_available() guard, cmd() helper
 
 Next Task: task-004
+
+================================================================================
+TASK-004: Update README.md and SKILL.md documentation
+Date: 2026-04-09T20:00:00Z
+================================================================================
+
+Summary:
+Added --output-format to README Configuration table and brief JSON mention in Output
+section. Added tip about --output-format json in SKILL.md. TOON remains primary format.
+
+Files Changed:
+- README.md (modified: config table row, output section sentence)
+- .claude/skills/neo4j-query/SKILL.md (modified: added tip bullet)
+
+Key Decisions:
+- Kept JSON mentions minimal — one table row, one sentence, one tip bullet
+- No new examples using JSON to keep TOON as the recommended default
+
+All tasks complete.

@@ -89,6 +89,7 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | `NEO4J_PASSWORD`  | `--password` | *(required)*             |
 | `NEO4J_DATABASE`  | `--database` | `neo4j`                  |
 | —                | `--env`      | auto-discover `.env`     |
+| —                | `--output-format` | `toon`              |
 
 The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
 
@@ -100,7 +101,7 @@ The `--env` flag loads a specific `.env` file. Without it, the tool searches for
 
 ## Output
 
-Results are printed to stdout in [TOON format](https://github.com/toon-format/toon-rust), a compact token-efficient serialization format. Errors go to stderr.
+Results are printed to stdout in [TOON format](https://github.com/toon-format/toon-rust), a compact token-efficient serialization format. Errors go to stderr. Use `--output-format json` for JSON output instead.
 
 ## Development
 
