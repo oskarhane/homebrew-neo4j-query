@@ -2,6 +2,7 @@ use clap::Parser;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
+use std::path::PathBuf;
 
 const MAX_RETRIES: u32 = 3;
 const INITIAL_BACKOFF_MS: u64 = 200;
@@ -31,6 +32,10 @@ struct Cli {
     /// Query parameters as key=value pairs
     #[arg(short, value_name = "KEY=VALUE")]
     p: Vec<String>,
+
+    /// Path to .env file to load
+    #[arg(long = "env", value_name = "FILE")]
+    env_file: Option<PathBuf>,
 }
 
 fn resolve_query(arg: Option<String>) -> Result<String, String> {
@@ -328,7 +333,32 @@ async fn run_schema(
     }))
 }
 
+fn load_env() -> Result<(), Box<dyn std::error::Error>> {
+    // Pre-scan args for --env before clap parses, so the file is loaded
+    // before clap resolves env-backed defaults.
+    let args: Vec<String> = std::env::args().collect();
+    let mut env_file: Option<PathBuf> = None;
+    for i in 0..args.len() {
+        if args[i] == "--env" {
+            if let Some(path) = args.get(i + 1) {
+                env_file = Some(PathBuf::from(path));
+            }
+        } else if let Some(path) = args[i].strip_prefix("--env=") {
+            env_file = Some(PathBuf::from(path));
+        }
+    }
+
+    if let Some(path) = env_file {
+        dotenvy::from_path(&path)
+            .map_err(|e| format!("failed to load env file '{}': {e}", path.display()))?;
+    } else {
+        dotenvy::dotenv().ok();
+    }
+    Ok(())
+}
+
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    load_env()?;
     let cli = Cli::parse();
     let input = resolve_query(cli.query)?;
 

@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use std::io::Write;
 
 fn neo4j_available() -> bool {
     std::env::var("NEO4J_TEST_URI").is_ok()
@@ -278,4 +279,90 @@ fn multiple_rows() {
         .assert()
         .success()
         .stdout(predicate::str::contains("1").and(predicate::str::contains("2")).and(predicate::str::contains("3")));
+}
+
+#[test]
+fn env_flag_nonexistent_file_errors() {
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .args(["--env", "/tmp/does_not_exist_neo4j.env", "RETURN 1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed to load env file"));
+}
+
+#[test]
+fn env_flag_loads_password() {
+    let mut tmp = tempfile::NamedTempFile::new().unwrap();
+    writeln!(tmp, "NEO4J_PASSWORD=fromenvfile").unwrap();
+
+    // Should not fail with "password required" — will fail with connection error instead
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .env("NEO4J_URI", "http://localhost:19999")
+        .args(["--env", tmp.path().to_str().unwrap(), "RETURN 1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn env_flag_equals_syntax() {
+    let mut tmp = tempfile::NamedTempFile::new().unwrap();
+    writeln!(tmp, "NEO4J_PASSWORD=fromenvfile").unwrap();
+
+    let arg = format!("--env={}", tmp.path().to_str().unwrap());
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .env("NEO4J_URI", "http://localhost:19999")
+        .args([&arg, "RETURN 1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+#[ignore]
+fn env_flag_with_neo4j() {
+    if !neo4j_available() {
+        return;
+    }
+    let mut tmp = tempfile::NamedTempFile::new().unwrap();
+    writeln!(tmp, "NEO4J_PASSWORD=testpassword").unwrap();
+    writeln!(
+        tmp,
+        "NEO4J_URI={}",
+        std::env::var("NEO4J_TEST_URI").unwrap_or_else(|_| "http://localhost:7474".into())
+    )
+    .unwrap();
+
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .env_remove("NEO4J_URI")
+        .args(["--env", tmp.path().to_str().unwrap(), "RETURN 1 as n"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("n"));
+}
+
+#[test]
+fn dotenv_auto_discovery() {
+    // Create a .env in a temp dir, run the binary from that dir
+    let dir = tempfile::tempdir().unwrap();
+    let env_path = dir.path().join(".env");
+    std::fs::write(&env_path, "NEO4J_PASSWORD=autodiscovered\n").unwrap();
+
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .env("NEO4J_URI", "http://localhost:19999")
+        .current_dir(dir.path())
+        .arg("RETURN 1")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
 }

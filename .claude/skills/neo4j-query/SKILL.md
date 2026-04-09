@@ -12,7 +12,7 @@ Query Neo4j databases using `neo4j-query`. Output is in TOON format (compact, to
 
 ## Prerequisites
 
-`neo4j-query` must be installed and in PATH. Credentials must be set via environment variables:
+`neo4j-query` must be installed and in PATH. Credentials can be set via a `.env` file (auto-discovered from cwd upward), a specific env file (`--env path`), or environment variables:
 - `NEO4J_URI` — Neo4j HTTP endpoint (default: `http://localhost:7474`)
 - `NEO4J_USER` — username (default: `neo4j`)
 - `NEO4J_PASSWORD` — password (required)

@@ -39,8 +39,24 @@ Then use `/neo4j-query` in Claude Code to query Neo4j. The skill automatically r
 
 ### 3. Set credentials
 
+Via a `.env` file (recommended):
+
 ```sh
-# Add to your shell profile
+# Create a .env file in your project directory
+echo 'NEO4J_URI=http://localhost:7474
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password' > .env
+```
+
+The tool automatically discovers `.env` files by searching from the current directory upward. You can also specify one explicitly:
+
+```sh
+neo4j-query --env /path/to/credentials.env "RETURN 1"
+```
+
+Or via shell environment variables:
+
+```sh
 export NEO4J_URI="http://localhost:7474"
 export NEO4J_USER="neo4j"
 export NEO4J_PASSWORD="your-password"
@@ -64,7 +80,7 @@ neo4j-query .schema
 
 ## Configuration
 
-Credentials via environment variables or CLI flags. CLI flags take priority.
+Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI flags > env vars > `.env` file.
 
 | Env var          | Flag         | Default                  |
 |------------------|--------------|--------------------------|
@@ -72,6 +88,9 @@ Credentials via environment variables or CLI flags. CLI flags take priority.
 | `NEO4J_USER`     | `--user`     | `neo4j`                  |
 | `NEO4J_PASSWORD`  | `--password` | *(required)*             |
 | `NEO4J_DATABASE`  | `--database` | `neo4j`                  |
+| —                | `--env`      | auto-discover `.env`     |
+
+The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
 
 ## Built-in Commands
 
