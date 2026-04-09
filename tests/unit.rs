@@ -147,3 +147,55 @@ fn rows_to_records_non_string_field_errors() {
     let values = vec![json!([1])];
     assert!(rows_to_records(&fields, &values).is_err());
 }
+
+#[test]
+fn rows_to_records_null_values() {
+    let fields = vec![json!("x"), json!("y")];
+    let values = vec![json!([null, 1])];
+    let records = rows_to_records(&fields, &values).unwrap();
+    assert_eq!(records[0]["x"], json!(null));
+    assert_eq!(records[0]["y"], json!(1));
+}
+
+#[test]
+fn rows_to_records_empty_fields_and_values() {
+    let fields: Vec<Value> = vec![];
+    let values: Vec<Value> = vec![];
+    let records = rows_to_records(&fields, &values).unwrap();
+    assert!(records.is_empty());
+}
+
+#[test]
+fn parse_param_value_negative_int() {
+    assert_eq!(parse_param_value("-42"), json!(-42));
+}
+
+#[test]
+fn parse_param_value_negative_float() {
+    assert_eq!(parse_param_value("-3.14"), json!(-3.14));
+}
+
+#[test]
+fn parse_param_value_empty_string() {
+    assert_eq!(parse_param_value(""), json!(""));
+}
+
+#[test]
+fn parse_params_empty() {
+    let pairs: Vec<String> = vec![];
+    let map = parse_params(&pairs).unwrap();
+    assert!(map.is_empty());
+}
+
+#[test]
+fn parse_param_value_string_that_looks_numeric() {
+    // "42abc" should be a string, not a number
+    assert_eq!(parse_param_value("42abc"), json!("42abc"));
+}
+
+#[test]
+fn rows_to_records_row_not_array_errors() {
+    let fields = vec![json!("x")];
+    let values = vec![json!("not an array")];
+    assert!(rows_to_records(&fields, &values).is_err());
+}

@@ -110,3 +110,136 @@ fn bad_query_errors() {
         .failure()
         .stderr(predicate::str::is_empty().not());
 }
+
+#[test]
+#[ignore]
+fn empty_result_set() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("MATCH (n:DoesNotExist99999) RETURN n")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[0]"));
+}
+
+#[test]
+#[ignore]
+fn write_only_no_return() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("CREATE (n:WriteTest {v: 1})")
+        .assert()
+        .success();
+    // cleanup
+    cmd().arg("MATCH (n:WriteTest) DELETE n").assert().success();
+}
+
+#[test]
+#[ignore]
+fn return_null_values() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("RETURN null as x, 1 as y")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("null"));
+}
+
+#[test]
+#[ignore]
+fn return_node_object() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("CREATE (n:NodeTest {name: 'test'}) RETURN n")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("NodeTest"));
+    cmd().arg("MATCH (n:NodeTest) DELETE n").assert().success();
+}
+
+#[test]
+#[ignore]
+fn wrong_password() {
+    if !neo4j_available() {
+        return;
+    }
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env("NEO4J_URI", "http://localhost:7474");
+    c.env("NEO4J_PASSWORD", "wrongpassword");
+    c.arg("RETURN 1")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("401"));
+}
+
+#[test]
+fn connection_refused() {
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env("NEO4J_URI", "http://localhost:19999")
+        .env("NEO4J_PASSWORD", "x")
+        .arg("RETURN 1")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("error"));
+}
+
+#[test]
+#[ignore]
+fn param_negative_number() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .args(["-p", "x=-5", "RETURN $x as val"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("-5"));
+}
+
+#[test]
+#[ignore]
+fn param_empty_value() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .args(["-p", "x=", "RETURN $x as val"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"\""));
+}
+
+#[test]
+#[ignore]
+fn multiple_columns() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("RETURN 'a' as x, 'b' as y, 'c' as z")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("x").and(predicate::str::contains("y")).and(predicate::str::contains("z")));
+}
+
+#[test]
+#[ignore]
+fn multiple_rows() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("UNWIND range(1,3) AS i RETURN i")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("1").and(predicate::str::contains("2")).and(predicate::str::contains("3")));
+}

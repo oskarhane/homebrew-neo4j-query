@@ -141,6 +141,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let status = resp.status();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_default();
+        // Try to extract error message from JSON response
+        if let Ok(parsed) = serde_json::from_str::<QueryResponse>(&text) {
+            if let Some(errors) = parsed.errors {
+                if !errors.is_empty() {
+                    let msgs: Vec<&str> = errors.iter().map(|e| e.message.as_str()).collect();
+                    return Err(format!("HTTP {status}: {}", msgs.join("; ")).into());
+                }
+            }
+        }
         return Err(format!("HTTP {status}: {text}").into());
     }
 
