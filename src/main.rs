@@ -1,8 +1,14 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
 use std::path::PathBuf;
+
+#[derive(Clone, Debug, ValueEnum)]
+enum OutputFormat {
+    Toon,
+    Json,
+}
 
 const MAX_RETRIES: u32 = 3;
 const INITIAL_BACKOFF_MS: u64 = 200;
@@ -36,6 +42,10 @@ struct Cli {
     /// Path to .env file to load
     #[arg(long = "env", value_name = "FILE")]
     env_file: Option<PathBuf>,
+
+    /// Output format
+    #[arg(long, value_enum, default_value = "toon")]
+    output_format: OutputFormat,
 }
 
 fn resolve_query(arg: Option<String>) -> Result<String, String> {

@@ -1,0 +1,17 @@
+================================================================================
+TASK-001: Add OutputFormat enum and --output-format CLI flag
+Date: 2026-04-09T19:15:00Z
+================================================================================
+
+Summary:
+Added OutputFormat enum (Toon, Json) with clap ValueEnum derive and --output-format
+CLI flag to Cli struct with default "toon". Invalid values produce standard clap error.
+
+Files Changed:
+- src/main.rs (modified: added OutputFormat enum, ValueEnum import, --output-format field)
+
+Key Decisions:
+- Placed enum before constants at top of file for visibility
+- Used #[derive(Clone, Debug, ValueEnum)] — Clone required by clap, Debug for convenience
+
+Next Task: task-002

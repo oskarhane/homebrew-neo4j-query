@@ -10,14 +10,14 @@ tasks:
       Add an OutputFormat enum with Toon and Json variants, deriving clap::ValueEnum for
       case-insensitive parsing. Add --output-format field to the Cli struct with default_value
       "toon". Invalid values should produce a standard clap error. No short flag needed.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "OutputFormat enum with Toon and Json variants exists with ValueEnum derive"
       - "--output-format flag parses toon and json (case-insensitive)"
       - "Default is toon when flag is omitted"
       - "Invalid values like xml produce a clap error"
-    completed_at: null
+    completed_at: 2026-04-09T19:15:00Z
 
   - id: task-002
     title: "Branch output on format enum for Cypher queries"
