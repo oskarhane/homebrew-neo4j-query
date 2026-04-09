@@ -119,7 +119,7 @@ docker compose -f tests/docker-compose.yml down
 
 ## Benchmarks
 
-Results from the recommendations dataset:
+Output defaults to [TOON](https://github.com/toon-format/toon-rust) but JSON is also supported via `--output-format json`. Token comparison from the recommendations dataset:
 
 | Query | JSON tokens | TOON tokens | Token % |
 |-------|------------|------------|--------|
