@@ -12,11 +12,17 @@ Query Neo4j databases using `neo4j-query`. Output is in TOON format (compact, to
 
 ## Prerequisites
 
-`neo4j-query` must be installed and in PATH. Credentials can be set via a `.env` file (auto-discovered from cwd upward), a specific env file (`--env path`), or environment variables:
-- `NEO4J_URI` — Neo4j HTTP endpoint (default: `http://localhost:7474`)
-- `NEO4J_USER` — username (default: `neo4j`)
-- `NEO4J_PASSWORD` — password (required)
-- `NEO4J_DATABASE` — database name (default: `neo4j`)
+`neo4j-query` must be installed and in PATH. Credentials can be set via CLI flags, a `.env` file, or environment variables:
+
+| Flag | Env var | Default |
+|------|---------|---------|
+| `--uri` | `NEO4J_URI` | `http://localhost:7474` |
+| `--user` | `NEO4J_USER` | `neo4j` |
+| `--password` | `NEO4J_PASSWORD` | *(required)* |
+| `--database` | `NEO4J_DATABASE` | `neo4j` |
+| `--env` | — | auto-discover `.env` |
+
+Priority: CLI flags > env vars > `.env` file. Use `--env path` to load a specific env file.
 
 ## CRITICAL: Fetch schema before generating Cypher
 
