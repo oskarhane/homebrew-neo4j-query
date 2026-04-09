@@ -2,21 +2,48 @@
 
 Query Neo4j databases from the command line. Outputs results in [TOON](https://github.com/toon-format/toon-rust) format.
 
-## Install
+## Setup
 
-### Homebrew (macOS/Linux)
+Two things needed: the **binary** and the **Claude Code skill**.
+
+### 1. Install the binary
+
+#### Homebrew (macOS/Linux)
 
 ```sh
 brew tap oskarhane/neo4j-query
 brew install neo4j-query
 ```
 
-### From source
+#### From source
 
 ```sh
 git clone https://github.com/oskarhane/homebrew-neo4j-query.git
 cd homebrew-neo4j-query
 cargo install --path .
+```
+
+### 2. Install the Claude Code skill
+
+```sh
+npx skills add https://github.com/oskarhane/homebrew-neo4j-query
+```
+
+Or manually:
+
+```sh
+cp -r .claude/skills/neo4j-query ~/.claude/skills/
+```
+
+Then use `/neo4j-query` in Claude Code to query Neo4j. The skill automatically runs `.schema` before generating Cypher so it always uses the correct labels, properties, and relationship types.
+
+### 3. Set credentials
+
+```sh
+# Add to your shell profile
+export NEO4J_URI="http://localhost:7474"
+export NEO4J_USER="neo4j"
+export NEO4J_PASSWORD="your-password"
 ```
 
 ## Usage
@@ -46,13 +73,6 @@ Credentials via environment variables or CLI flags. CLI flags take priority.
 | `NEO4J_PASSWORD`  | `--password` | *(required)*             |
 | `NEO4J_DATABASE`  | `--database` | `neo4j`                  |
 
-```sh
-# Set once in your shell profile
-export NEO4J_URI="http://localhost:7474"
-export NEO4J_USER="neo4j"
-export NEO4J_PASSWORD="your-password"
-```
-
 ## Built-in Commands
 
 | Command    | Description |
@@ -62,16 +82,6 @@ export NEO4J_PASSWORD="your-password"
 ## Output
 
 Results are printed to stdout in [TOON format](https://github.com/toon-format/toon-rust), a compact token-efficient serialization format. Errors go to stderr.
-
-## Claude Code Skill
-
-This repo includes a Claude Code skill at `.claude/skills/neo4j-query/`. To use it, copy the skill to your project or personal skills directory:
-
-```sh
-cp -r .claude/skills/neo4j-query ~/.claude/skills/
-```
-
-Then use `/neo4j-query` in Claude Code to query Neo4j databases.
 
 ## Development
 
