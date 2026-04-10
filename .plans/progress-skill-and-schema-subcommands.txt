@@ -39,3 +39,24 @@ Key Decisions:
 - find_agent() added for --agent flag filtering in future tasks
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Implement skill install with symlink and copy fallback
+Date: 2026-04-10T13:30:00Z
+================================================================================
+
+Summary:
+Added install() to src/skill.rs: embeds SKILL.md via include_str!, writes to
+canonical dir, symlinks to each detected agent's skills dir with copy fallback.
+Created skills/neo4j-query/SKILL.md as the embed source (copied from .claude/).
+
+Files Changed:
+- src/skill.rs (modified: added install(), copy_dir(), remove_any(), SKILL_MD const)
+- skills/neo4j-query/SKILL.md (created: compile-time embed source for include_str!)
+
+Key Decisions:
+- Created skills/neo4j-query/SKILL.md early (task-006 dep) so include_str! compiles
+- Used #[cfg(unix)] for symlink, non-unix always falls back to copy
+- remove_any() uses symlink_metadata to correctly handle symlinks vs dirs
+
+Next Task: task-004

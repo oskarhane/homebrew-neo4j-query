@@ -37,7 +37,7 @@ tasks:
     title: "Implement skill install with symlink and copy fallback"
     description: |
       Add install() function to src/skill.rs. Embed SKILL.md content via include_str!("../skills/neo4j-query/SKILL.md"). Create the canonical dir (~/.local/share/neo4j-query/skills/neo4j-query/), write SKILL.md there. For each target agent, create parent skills dir if needed, remove existing target (symlink/file/dir), then create a symlink pointing to canonical dir. If symlink fails, fall back to copying the directory. Print one line per agent on success. If no agents detected and no --agent filter, print error to stderr and exit 1.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -47,7 +47,7 @@ tasks:
       - "Falls back to directory copy if symlink creation fails"
       - "Prints 'installed neo4j-query skill for <DisplayName> → <path>' per agent"
       - "Prints error and exits 1 when no agents detected and no --agent flag"
-    completed_at: null
+    completed_at: 2026-04-10T13:30:00Z
 
   - id: task-004
     title: "Implement skill remove and skill list subcommands"

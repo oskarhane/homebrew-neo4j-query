@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct Agent {
     pub name: &'static str,
@@ -143,4 +143,90 @@ pub fn detect_agents() -> Vec<&'static Agent> {
 pub fn find_agent(name: &str) -> Option<&'static Agent> {
     let lower = name.to_lowercase();
     AGENTS.iter().find(|a| a.name == lower)
+}
+
+/// Embedded SKILL.md content, baked in at compile time.
+const SKILL_MD: &str = include_str!("../skills/neo4j-query/SKILL.md");
+
+/// Recursively copy a directory.
+fn copy_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let target = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
+/// Remove a path whether it is a file, symlink, or directory.
+fn remove_any(path: &Path) -> std::io::Result<()> {
+    let meta = match std::fs::symlink_metadata(path) {
+        Ok(m) => m,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e),
+    };
+    if meta.is_dir() && !meta.file_type().is_symlink() {
+        std::fs::remove_dir_all(path)
+    } else {
+        std::fs::remove_file(path)
+    }
+}
+
+/// Install the neo4j-query skill for detected (or filtered) agents.
+pub fn install(agent_filter: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    // Determine target agents
+    let targets: Vec<&Agent> = if let Some(name) = agent_filter {
+        let agent = find_agent(name).ok_or_else(|| format!("unknown agent '{name}'"))?;
+        vec![agent]
+    } else {
+        let detected = detect_agents();
+        if detected.is_empty() {
+            eprintln!("error: no supported AI agents detected. Use --agent to specify one.");
+            std::process::exit(1);
+        }
+        detected
+    };
+
+    // Write canonical SKILL.md
+    let canonical = canonical_dir().ok_or("cannot determine home directory")?;
+    std::fs::create_dir_all(&canonical)?;
+    std::fs::write(canonical.join("SKILL.md"), SKILL_MD)?;
+
+    // Install for each target agent
+    for agent in &targets {
+        let skills_dir = agent
+            .skills_path()
+            .ok_or_else(|| format!("cannot resolve skills path for {}", agent.display_name))?;
+        std::fs::create_dir_all(&skills_dir)?;
+
+        let target_path = skills_dir.join("neo4j-query");
+        remove_any(&target_path)?;
+
+        // Try symlink first, fall back to copy
+        #[cfg(unix)]
+        let link_result = std::os::unix::fs::symlink(&canonical, &target_path);
+        #[cfg(not(unix))]
+        let link_result: std::io::Result<()> = Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "symlinks not supported",
+        ));
+
+        if link_result.is_err() {
+            copy_dir(&canonical, &target_path)?;
+        }
+
+        println!(
+            "installed neo4j-query skill for {} → {}",
+            agent.display_name,
+            target_path.display()
+        );
+    }
+
+    Ok(())
 }
