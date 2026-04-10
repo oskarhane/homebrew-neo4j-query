@@ -53,7 +53,7 @@ tasks:
     title: "Implement skill remove and skill list subcommands"
     description: |
       Add remove() and list() functions to src/skill.rs. remove() deletes the symlink or directory at each agent's skill path, optionally filtered by --agent. If no agents have the skill installed after removal, also remove the canonical dir. list() iterates all 11 known agents, checks if detected (config dir exists) and if the skill is installed (skill dir/symlink exists), then prints a formatted table or list.
-    status: pending
+    status: completed
     dependencies:
       - task-003
     acceptance_criteria:
@@ -62,7 +62,7 @@ tasks:
       - "Canonical dir removed when no agents have the skill installed"
       - "skill list shows all 11 agents with detected and installed status"
       - "skill list works even when no agents are detected (shows all as not detected)"
-    completed_at: null
+    completed_at: 2026-04-10T14:00:00Z
 
   - id: task-005
     title: "Wire skill subcommands into main.rs command routing"

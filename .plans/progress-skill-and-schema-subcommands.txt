@@ -60,3 +60,24 @@ Key Decisions:
 - remove_any() uses symlink_metadata to correctly handle symlinks vs dirs
 
 Next Task: task-004
+
+================================================================================
+TASK-004: Implement skill remove and skill list subcommands
+Date: 2026-04-10T14:00:00Z
+================================================================================
+
+Summary:
+Added remove() and list() functions to src/skill.rs. remove() deletes skill
+symlinks/dirs from detected agents with optional --agent filter, cleans up
+canonical dir when no agents remain. list() prints all 11 agents with
+detected/installed status in a formatted table.
+
+Files Changed:
+- src/skill.rs (modified: added is_skill_installed(), remove(), list())
+
+Key Decisions:
+- is_skill_installed() uses symlink_metadata to detect both symlinks and dirs
+- remove() cleans up canonical dir and empty parent dirs when no agents have skill
+- list() always shows all 11 agents regardless of detection status
+
+Next Task: task-005

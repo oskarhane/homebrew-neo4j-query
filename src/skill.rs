@@ -230,3 +230,78 @@ pub fn install(agent_filter: Option<&str>) -> Result<(), Box<dyn std::error::Err
 
     Ok(())
 }
+
+/// Check whether the neo4j-query skill is installed for a given agent.
+fn is_skill_installed(agent: &Agent) -> bool {
+    agent
+        .skills_path()
+        .map(|p| {
+            let skill_path = p.join("neo4j-query");
+            std::fs::symlink_metadata(&skill_path).is_ok()
+        })
+        .unwrap_or(false)
+}
+
+/// Remove the neo4j-query skill from detected (or filtered) agents.
+pub fn remove(agent_filter: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    let targets: Vec<&Agent> = if let Some(name) = agent_filter {
+        let agent = find_agent(name).ok_or_else(|| format!("unknown agent '{name}'"))?;
+        vec![agent]
+    } else {
+        detect_agents()
+    };
+
+    let mut removed_any = false;
+    for agent in &targets {
+        let skills_dir = match agent.skills_path() {
+            Some(p) => p,
+            None => continue,
+        };
+        let target_path = skills_dir.join("neo4j-query");
+        if std::fs::symlink_metadata(&target_path).is_ok() {
+            remove_any(&target_path)?;
+            println!("removed neo4j-query skill from {}", agent.display_name);
+            removed_any = true;
+        }
+    }
+
+    if !removed_any {
+        println!("neo4j-query skill was not installed for any agents");
+    }
+
+    // If no agent has the skill installed anymore, remove the canonical dir
+    let any_installed = AGENTS.iter().any(is_skill_installed);
+    if !any_installed {
+        if let Some(canonical) = canonical_dir() {
+            if std::fs::metadata(&canonical).is_ok() {
+                std::fs::remove_dir_all(&canonical)?;
+                // Also try to clean up empty parent dirs
+                if let Some(parent) = canonical.parent() {
+                    let _ = std::fs::remove_dir(parent); // skills/
+                    if let Some(grandparent) = parent.parent() {
+                        let _ = std::fs::remove_dir(grandparent); // neo4j-query/
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// List all known agents with their detected and skill-installed status.
+pub fn list() {
+    let detected_agents = detect_agents();
+
+    println!("{:<15} {:<10} SKILL INSTALLED", "AGENT", "DETECTED");
+    for agent in AGENTS {
+        let detected = detected_agents.iter().any(|a| a.name == agent.name);
+        let installed = is_skill_installed(agent);
+        println!(
+            "{:<15} {:<10} {}",
+            agent.display_name,
+            if detected { "yes" } else { "no" },
+            if installed { "yes" } else { "no" },
+        );
+    }
+}
