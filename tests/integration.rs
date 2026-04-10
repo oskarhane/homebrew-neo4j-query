@@ -277,7 +277,7 @@ fn schema_command() {
         .assert()
         .success();
 
-    cmd().arg(".schema").assert().success().stdout(
+    cmd().arg("schema").assert().success().stdout(
         predicate::str::contains("SchemaTest")
             .and(predicate::str::contains("SchemaTarget"))
             .and(predicate::str::contains("SCHEMA_REL"))
@@ -426,11 +426,7 @@ fn json_multi_column() {
         return;
     }
     let output = cmd()
-        .args([
-            "--format",
-            "json",
-            "RETURN 'a' as x, 'b' as y, 'c' as z",
-        ])
+        .args(["--format", "json", "RETURN 'a' as x, 'b' as y, 'c' as z"])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -484,11 +480,7 @@ fn json_empty_result_set() {
         return;
     }
     let output = cmd()
-        .args([
-            "--format",
-            "json",
-            "MATCH (n:DoesNotExist99999) RETURN n",
-        ])
+        .args(["--format", "json", "MATCH (n:DoesNotExist99999) RETURN n"])
         .output()
         .unwrap();
     assert!(output.status.success());

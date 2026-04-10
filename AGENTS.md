@@ -13,6 +13,11 @@ This is a single repo (`oskarhane/homebrew-neo4j-query`) that serves as both the
 - **LINT**: `cargo clippy`
 - **FORMAT**: `cargo fmt --check`
 
+## CLI Architecture
+
+- `ConnectionArgs.password` is `Option<String>` — subcommands that don't need DB access (like `skill`) work without it. Use `require_password()` in modes that need it.
+- `args_conflicts_with_subcommands = true` on Cli struct separates query-mode flags from subcommand flags.
+
 ## Release
 
 The GitHub Actions release workflow (`.github/workflows/release.yml`) builds binaries, creates a GitHub release, and updates the formula in this same repo — all in one place.

@@ -4,7 +4,7 @@ A fast, lightweight, non-interactive CLI for querying Neo4j — built for AI age
 
 ## Setup
 
-Two things needed: the **binary** and the **Claude Code skill**.
+Two things needed: the **binary** and the **AI agent skill**.
 
 ### 1. Install the binary
 
@@ -23,19 +23,15 @@ cd homebrew-neo4j-query
 cargo install --path .
 ```
 
-### 2. Install the Claude Code skill
+### 2. Install the AI agent skill
 
 ```sh
-npx skills add https://github.com/oskarhane/homebrew-neo4j-query
+neo4j-query skill install
 ```
 
-Or manually:
+This detects supported AI agents (Claude Code, Cursor, Windsurf, Copilot, etc.) and installs the skill for each one. Use `neo4j-query skill list` to see which agents are detected and installed.
 
-```sh
-cp -r .claude/skills/neo4j-query ~/.claude/skills/
-```
-
-Then use `/neo4j-query` in Claude Code to query Neo4j. The skill automatically runs `.schema` before generating Cypher so it always uses the correct labels, properties, and relationship types.
+Then use `/neo4j-query` in Claude Code to query Neo4j. The skill automatically runs `schema` before generating Cypher so it always uses the correct labels, properties, and relationship types.
 
 ### 3. Set credentials
 
@@ -74,7 +70,7 @@ echo "MATCH (n) RETURN n LIMIT 5" | neo4j-query
 neo4j-query -P name=Alice "MATCH (n:Person {name: \$name}) RETURN n"
 
 # Schema introspection
-neo4j-query .schema
+neo4j-query schema
 ```
 
 ## Configuration
@@ -92,11 +88,14 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 
 The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
 
-## Built-in Commands
+## Subcommands
 
-| Command    | Description |
-|------------|-------------|
-| `.schema`  | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), and connection paths |
+| Command              | Description |
+|----------------------|-------------|
+| `schema`             | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), and connection paths |
+| `skill install`      | Install the neo4j-query skill for detected AI agents |
+| `skill remove`       | Remove the neo4j-query skill from AI agents |
+| `skill list`         | List all known AI agents and skill installation status |
 
 ## Output
 

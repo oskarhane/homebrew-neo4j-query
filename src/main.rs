@@ -1,4 +1,6 @@
-use clap::{Parser, ValueEnum};
+mod skill;
+
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
@@ -13,12 +15,8 @@ enum OutputFormat {
 const MAX_RETRIES: u32 = 3;
 const INITIAL_BACKOFF_MS: u64 = 200;
 
-#[derive(Parser)]
-#[command(name = "neo4j-query", about = "Query Neo4j databases, output TOON")]
-struct Cli {
-    /// Cypher query to execute (or .schema for schema introspection)
-    query: Option<String>,
-
+#[derive(Parser, Clone)]
+struct ConnectionArgs {
     /// Neo4j HTTP URI
     #[arg(long, env = "NEO4J_URI", default_value = "http://localhost:7474")]
     uri: String,
@@ -29,23 +27,82 @@ struct Cli {
 
     /// Neo4j password
     #[arg(short, long, env = "NEO4J_PASSWORD")]
-    password: String,
+    password: Option<String>,
 
     /// Neo4j database name
     #[arg(long = "db", env = "NEO4J_DATABASE", default_value = "neo4j")]
     db: String,
 
+    /// Path to .env file to load
+    #[arg(long = "env", value_name = "FILE")]
+    env_file: Option<PathBuf>,
+}
+
+impl ConnectionArgs {
+    fn require_password(&self) -> Result<&str, String> {
+        self.password
+            .as_deref()
+            .ok_or_else(|| "password required: set --password, -p, or NEO4J_PASSWORD".into())
+    }
+}
+
+#[derive(Parser)]
+struct QueryArgs {
+    /// Cypher query to execute
+    query: Option<String>,
+
+    #[command(flatten)]
+    conn: ConnectionArgs,
+
     /// Query parameters as key=value pairs
     #[arg(short = 'P', value_name = "KEY=VALUE")]
     p: Vec<String>,
 
-    /// Path to .env file to load
-    #[arg(long = "env", value_name = "FILE")]
-    env_file: Option<PathBuf>,
-
     /// Output format
     #[arg(long, value_enum, default_value = "toon")]
     format: OutputFormat,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Introspect database schema
+    Schema {
+        #[command(flatten)]
+        conn: ConnectionArgs,
+    },
+    /// Manage AI agent skill installation
+    Skill {
+        #[command(subcommand)]
+        action: SkillAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum SkillAction {
+    /// Install the neo4j-query skill for detected AI agents
+    Install(SkillArgs),
+    /// Remove the neo4j-query skill from AI agents
+    Remove(SkillArgs),
+    /// List all known AI agents and skill installation status
+    List,
+}
+
+#[derive(Args)]
+struct SkillArgs {
+    /// Target a specific agent by name
+    #[arg(long)]
+    agent: Option<String>,
+}
+
+#[derive(Parser)]
+#[command(name = "neo4j-query", about = "Query Neo4j databases, output TOON")]
+#[command(args_conflicts_with_subcommands = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+
+    #[command(flatten)]
+    query_args: QueryArgs,
 }
 
 fn resolve_query(arg: Option<String>) -> Result<String, String> {
@@ -388,28 +445,18 @@ fn load_env() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    load_env()?;
-    let cli = Cli::parse();
-    let input = resolve_query(cli.query)?;
+async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let input = resolve_query(qa.query)?;
+    let password = qa.conn.require_password()?;
 
     let url = format!(
         "{}/db/{}/query/v2",
-        cli.uri.trim_end_matches('/'),
-        cli.db
+        qa.conn.uri.trim_end_matches('/'),
+        qa.conn.db
     );
 
     let client = reqwest::Client::new();
-
-    // Handle built-in commands
-    if input.trim() == ".schema" {
-        let schema = run_schema(&client, &url, &cli.username, &cli.password).await?;
-        let toon = toon_format::encode_default(&schema)?;
-        println!("{toon}");
-        return Ok(());
-    }
-
-    let params = parse_params(&cli.p)?;
+    let params = parse_params(&qa.p)?;
 
     let mut body = Map::new();
     body.insert("statement".into(), Value::String(input));
@@ -420,7 +467,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut last_err = None;
     for attempt in 0..=MAX_RETRIES {
-        match execute_query(&client, &url, &cli.username, &cli.password, &body).await {
+        match execute_query(&client, &url, &qa.conn.username, password, &body).await {
             Ok(parsed) => {
                 if let Some(errors) = &parsed.errors {
                     if !errors.is_empty() {
@@ -441,7 +488,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 let data = parsed.data.ok_or("no data in response")?;
                 let records = rows_to_records(&data.fields, &data.values)?;
-                let formatted = match cli.format {
+                let formatted = match qa.format {
                     OutputFormat::Json => serde_json::to_string(&records)?,
                     OutputFormat::Toon => toon_format::encode_default(&records)?,
                 };
@@ -473,6 +520,34 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     Err(last_err
         .unwrap_or_else(|| "max retries exceeded".into())
         .into())
+}
+
+async fn run_schema_mode(conn: ConnectionArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let password = conn.require_password()?;
+    let url = format!("{}/db/{}/query/v2", conn.uri.trim_end_matches('/'), conn.db);
+    let client = reqwest::Client::new();
+    let schema = run_schema(&client, &url, &conn.username, password).await?;
+    let toon = toon_format::encode_default(&schema)?;
+    println!("{toon}");
+    Ok(())
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    load_env()?;
+    let cli = Cli::parse();
+
+    match cli.command {
+        Some(Commands::Schema { conn }) => run_schema_mode(conn).await,
+        Some(Commands::Skill { action }) => match action {
+            SkillAction::Install(args) => skill::install(args.agent.as_deref()),
+            SkillAction::Remove(args) => skill::remove(args.agent.as_deref()),
+            SkillAction::List => {
+                skill::list();
+                Ok(())
+            }
+        },
+        None => run_query_mode(cli.query_args).await,
+    }
 }
 
 fn main() {
