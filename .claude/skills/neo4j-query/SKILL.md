@@ -17,12 +17,12 @@ Query Neo4j databases using `neo4j-query`. Output is in TOON format (compact, to
 | Flag | Env var | Default |
 |------|---------|---------|
 | `--uri` | `NEO4J_URI` | `http://localhost:7474` |
-| `--user` | `NEO4J_USER` | `neo4j` |
-| `--password` | `NEO4J_PASSWORD` | *(required)* |
+| `-u` / `--username` | `NEO4J_USERNAME` | `neo4j` |
+| `-p` / `--password` | `NEO4J_PASSWORD` | *(required)* |
 | `--database` | `NEO4J_DATABASE` | `neo4j` |
 | `--env` | — | auto-discover `.env` |
 
-Priority: CLI flags > env vars > `.env` file. Use `--env path` to load a specific env file.
+Priority: CLI flags > env vars > `.env` file. Use `--env path` to load a specific env file. Prefer `-u`/`-p` over `--username`/`--password` when passing credentials on the command line.
 
 ## CRITICAL: Fetch schema before generating Cypher
 
@@ -78,7 +78,7 @@ neo4j-query "MATCH (n:Person) RETURN n.name, n.age LIMIT 10"
 
 With parameters:
 ```bash
-neo4j-query -p name=Alice -p age=30 "MATCH (n:Person {name: \$name, age: \$age}) RETURN n"
+neo4j-query -P name=Alice -P age=30 "MATCH (n:Person {name: \$name, age: \$age}) RETURN n"
 ```
 
 Query from stdin:
@@ -104,7 +104,7 @@ If the user provides a specific Cypher query, run it directly — don't fetch sc
 
 - Run `neo4j-query .schema` before generating Cypher — never assume you know the schema
 - Use `LIMIT` for exploratory queries to avoid large result sets
-- Use parameters (`-p`) for dynamic values instead of string interpolation
+- Use parameters (`-P`) for dynamic values instead of string interpolation
 - Relationship directions matter — check `paths.from` and `paths.to` in the schema output
 - Property types from the schema tell you whether to use string vs numeric comparisons
 - Use `--output json` if you need JSON output instead of TOON

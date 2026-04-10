@@ -42,7 +42,7 @@ Then use `/neo4j-query` in Claude Code to query Neo4j. The skill automatically r
 Quickest way — pass directly:
 
 ```sh
-neo4j-query --uri http://localhost:7474 --user neo4j --password secret "RETURN 1"
+neo4j-query --uri http://localhost:7474 --username neo4j --password secret "RETURN 1"
 ```
 
 Or point to an env file:
@@ -55,11 +55,11 @@ For repeated use, create a `.env` file in your project directory (auto-discovere
 
 ```sh
 echo 'NEO4J_URI=http://localhost:7474
-NEO4J_USER=neo4j
+NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-password' > .env
 ```
 
-Shell environment variables (`NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`) also work.
+Shell environment variables (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`) also work.
 
 ## Usage
 
@@ -71,7 +71,7 @@ neo4j-query "MATCH (n:Person) RETURN n.name LIMIT 10"
 echo "MATCH (n) RETURN n LIMIT 5" | neo4j-query
 
 # With parameters
-neo4j-query -p name=Alice "MATCH (n:Person {name: \$name}) RETURN n"
+neo4j-query -P name=Alice "MATCH (n:Person {name: \$name}) RETURN n"
 
 # Schema introspection
 neo4j-query .schema
@@ -84,7 +84,7 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | Env var          | Flag         | Default                  |
 |------------------|--------------|--------------------------|
 | `NEO4J_URI`      | `--uri`      | `http://localhost:7474`  |
-| `NEO4J_USER`     | `--user`     | `neo4j`                  |
+| `NEO4J_USERNAME`  | `--username` | `neo4j`                  |
 | `NEO4J_PASSWORD`  | `--password` | *(required)*             |
 | `NEO4J_DATABASE`  | `--database` | `neo4j`                  |
 | —                | `--env`      | auto-discover `.env`     |

@@ -65,7 +65,7 @@ fn query_with_params() {
         return;
     }
     cmd()
-        .args(["-p", "x=42", "RETURN $x as val"])
+        .args(["-P", "x=42", "RETURN $x as val"])
         .assert()
         .success()
         .stdout(predicate::str::contains("42"));
@@ -190,12 +190,46 @@ fn connection_refused() {
 
 #[test]
 #[ignore]
+fn short_flag_u_for_username() {
+    if !neo4j_available() {
+        return;
+    }
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env(
+        "NEO4J_URI",
+        std::env::var("NEO4J_TEST_URI").unwrap_or_else(|_| "http://localhost:7474".into()),
+    );
+    c.args(["-u", "neo4j", "-p", "testpassword", "RETURN 1 as n"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("1"));
+}
+
+#[test]
+#[ignore]
+fn short_flag_p_for_password() {
+    if !neo4j_available() {
+        return;
+    }
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env(
+        "NEO4J_URI",
+        std::env::var("NEO4J_TEST_URI").unwrap_or_else(|_| "http://localhost:7474".into()),
+    );
+    c.args(["-p", "testpassword", "RETURN 1 as n"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("1"));
+}
+
+#[test]
+#[ignore]
 fn param_negative_number() {
     if !neo4j_available() {
         return;
     }
     cmd()
-        .args(["-p", "x=-5", "RETURN $x as val"])
+        .args(["-P", "x=-5", "RETURN $x as val"])
         .assert()
         .success()
         .stdout(predicate::str::contains("-5"));
@@ -208,7 +242,7 @@ fn param_empty_value() {
         return;
     }
     cmd()
-        .args(["-p", "x=", "RETURN $x as val"])
+        .args(["-P", "x=", "RETURN $x as val"])
         .assert()
         .success()
         .stdout(predicate::str::contains("\"\""));
@@ -415,7 +449,7 @@ fn json_with_params() {
         return;
     }
     let output = cmd()
-        .args(["--output", "json", "-p", "x=42", "RETURN $x as val"])
+        .args(["--output", "json", "-P", "x=42", "RETURN $x as val"])
         .output()
         .unwrap();
     assert!(output.status.success());

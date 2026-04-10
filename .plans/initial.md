@@ -6,7 +6,7 @@ Rust CLI tool to query Neo4j via its **Query API v2** (`POST /db/{db}/query/v2`)
 ## Credential Handling
 Env vars + CLI flag overrides (clap `env` attribute):
 - `NEO4J_URI` / `--uri` — default `http://localhost:7474`
-- `NEO4J_USER` / `--user` — default `neo4j`
+- `NEO4J_USERNAME` / `--username` — default `neo4j`
 - `NEO4J_PASSWORD` / `--password` — required
 - `NEO4J_DATABASE` / `--database` — default `neo4j`
 

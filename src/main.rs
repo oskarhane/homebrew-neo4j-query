@@ -24,11 +24,11 @@ struct Cli {
     uri: String,
 
     /// Neo4j username
-    #[arg(long, env = "NEO4J_USER", default_value = "neo4j")]
-    user: String,
+    #[arg(short, long, env = "NEO4J_USERNAME", default_value = "neo4j")]
+    username: String,
 
     /// Neo4j password
-    #[arg(long, env = "NEO4J_PASSWORD")]
+    #[arg(short, long, env = "NEO4J_PASSWORD")]
     password: String,
 
     /// Neo4j database name
@@ -36,7 +36,7 @@ struct Cli {
     database: String,
 
     /// Query parameters as key=value pairs
-    #[arg(short, value_name = "KEY=VALUE")]
+    #[arg(short = 'P', value_name = "KEY=VALUE")]
     p: Vec<String>,
 
     /// Path to .env file to load
@@ -403,7 +403,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Handle built-in commands
     if input.trim() == ".schema" {
-        let schema = run_schema(&client, &url, &cli.user, &cli.password).await?;
+        let schema = run_schema(&client, &url, &cli.username, &cli.password).await?;
         let toon = toon_format::encode_default(&schema)?;
         println!("{toon}");
         return Ok(());
@@ -420,7 +420,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut last_err = None;
     for attempt in 0..=MAX_RETRIES {
-        match execute_query(&client, &url, &cli.user, &cli.password, &body).await {
+        match execute_query(&client, &url, &cli.username, &cli.password, &body).await {
             Ok(parsed) => {
                 if let Some(errors) = &parsed.errors {
                     if !errors.is_empty() {
