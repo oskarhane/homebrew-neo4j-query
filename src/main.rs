@@ -1,3 +1,5 @@
+mod skill;
+
 use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;

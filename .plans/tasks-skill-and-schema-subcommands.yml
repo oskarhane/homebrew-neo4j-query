@@ -23,7 +23,7 @@ tasks:
     title: "Create src/skill.rs with agent detection and canonical path resolution"
     description: |
       Add a new src/skill.rs module with the agent registry (11 agents: claude-code, cursor, windsurf, copilot, gemini-cli, cline, roo, codex, pi, opencode, junie) and detection logic. Each agent has a name, display name, detect dir, and skills dir. Detection checks if the global config dir exists via fs::metadata(). Resolve ~ to home dir and $XDG_CONFIG_HOME (default ~/.config) for opencode. Export detect_agents() returning matched agents. Define the canonical path as ~/.local/share/neo4j-query/skills/neo4j-query/.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "AGENTS static array contains all 11 agents with correct detect/skills dirs"
@@ -31,7 +31,7 @@ tasks:
       - "$XDG_CONFIG_HOME resolved with ~/.config fallback for opencode"
       - "~ expanded to actual home directory in all paths"
       - "Module declared in main.rs with mod skill"
-    completed_at: null
+    completed_at: 2026-04-10T13:00:00Z
 
   - id: task-003
     title: "Implement skill install with symlink and copy fallback"

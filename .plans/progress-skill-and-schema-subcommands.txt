@@ -19,3 +19,23 @@ Key Decisions:
 - args_conflicts_with_subcommands ensures clean separation between query mode and subcommands
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Create src/skill.rs with agent detection and canonical path resolution
+Date: 2026-04-10T13:00:00Z
+================================================================================
+
+Summary:
+Created src/skill.rs with 11-agent registry, path expansion (~/,$XDG_CONFIG_HOME),
+detect_agents(), canonical_dir(), find_agent(), all_agents(). No new deps.
+
+Files Changed:
+- src/skill.rs (created: agent registry, detection, path resolution)
+- src/main.rs (modified: added mod skill declaration)
+
+Key Decisions:
+- Used std::env::var("HOME") instead of dirs crate to avoid new dependency
+- Agent struct fields detect_dir/skills_dir are private, exposed via methods
+- find_agent() added for --agent flag filtering in future tasks
+
+Next Task: task-003
