@@ -93,8 +93,8 @@ The `--env` flag loads a specific `.env` file. Without it, the tool searches for
 | Command              | Description |
 |----------------------|-------------|
 | `schema`             | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), and connection paths |
-| `skill install`      | Install the neo4j-query skill for detected AI agents |
-| `skill remove`       | Remove the neo4j-query skill from AI agents |
+| `skill install [--agent <name>]` | Install the neo4j-query skill for detected AI agents (or a specific one) |
+| `skill remove [--agent <name>]`  | Remove the neo4j-query skill from AI agents (or a specific one) |
 | `skill list`         | List all known AI agents and skill installation status |
 
 ## Output
