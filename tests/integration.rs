@@ -3,6 +3,15 @@ use predicates::prelude::*;
 use serde_json::Value;
 use std::io::Write;
 
+/// Command pointing at a dead port with no password env var.
+/// Tests using this helper verify clap flag parsing without a live Neo4j.
+fn cmd_no_neo4j() -> Command {
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env_remove("NEO4J_PASSWORD");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c
+}
+
 fn neo4j_available() -> bool {
     std::env::var("NEO4J_TEST_URI").is_ok()
         || std::net::TcpStream::connect("127.0.0.1:7474").is_ok()
@@ -506,4 +515,90 @@ fn json_empty_result_set() {
     let stdout = String::from_utf8(output.stdout).unwrap();
     let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
     assert!(parsed.is_empty());
+}
+
+// --- Schema flag-position tests (no Neo4j required) ---
+
+#[test]
+fn schema_short_password_before() {
+    cmd_no_neo4j()
+        .args(["-p", "secret", "schema"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_short_user_password_before() {
+    cmd_no_neo4j()
+        .args(["-u", "neo4j", "-p", "secret", "schema"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_short_password_after() {
+    cmd_no_neo4j()
+        .args(["schema", "-p", "secret"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_multiple_flags_after() {
+    cmd_no_neo4j()
+        .args(["schema", "-u", "neo4j", "-p", "secret"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_flags_split_around() {
+    cmd_no_neo4j()
+        .args(["-u", "neo4j", "schema", "-p", "secret"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_long_password_before() {
+    cmd_no_neo4j()
+        .args(["--password", "secret", "schema"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_long_password_after() {
+    cmd_no_neo4j()
+        .args(["schema", "--password", "secret"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_db_flag() {
+    cmd_no_neo4j()
+        .args(["-p", "secret", "--db", "mydb", "schema"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn schema_env_flag_after() {
+    let mut tmp = tempfile::NamedTempFile::new().unwrap();
+    writeln!(tmp, "NEO4J_PASSWORD=secret").unwrap();
+
+    cmd_no_neo4j()
+        .args(["schema", "--env", tmp.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
 }

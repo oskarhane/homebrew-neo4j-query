@@ -14,3 +14,21 @@ Key Decisions:
 - ConnectionArgs stays flattened into QueryArgs; global propagation handles subcommands
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Add cmd_no_neo4j helper and schema flag-position tests
+Date: 2026-04-10T12:10:00Z
+================================================================================
+
+Summary:
+Added cmd_no_neo4j() helper and 9 schema flag-position tests verifying global
+connection flags work before, after, and split around the schema subcommand.
+
+Files Changed:
+- tests/integration.rs (modified: added cmd_no_neo4j helper and 9 tests)
+
+Key Decisions:
+- Tests assert failure + no "password" in stderr to confirm clap parsed the flag correctly
+- All tests are non-ignored (no Neo4j needed), using dead port localhost:19999
+
+Next Task: task-003

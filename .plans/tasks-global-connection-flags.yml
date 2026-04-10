@@ -28,7 +28,7 @@ tasks:
       a dead port (localhost:19999) with NEO4J_PASSWORD removed. Add 9 tests covering connection
       flags before, after, and split around the `schema` subcommand — short and long forms, plus
       `--db` and `--env` flags. Each test asserts failure without a "password" error message.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -36,7 +36,7 @@ tasks:
       - "Tests cover: `-p` before schema, `-u -p` before, `-p` after, multiple flags after, split around, long `--password` before/after, `--db` with schema, `--env` after schema"
       - "All 9 schema flag-position tests pass with `cargo test`"
       - "Tests do not require a running Neo4j instance"
-    completed_at: null
+    completed_at: 2026-04-10T12:10:00Z
 
   - id: task-003
     title: "Add query-mode and skill subcommand regression tests"
