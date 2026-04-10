@@ -375,7 +375,7 @@ fn json_return_literal() {
         return;
     }
     let output = cmd()
-        .args(["--output-format", "json", "RETURN 1 as n"])
+        .args(["--output", "json", "RETURN 1 as n"])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -393,7 +393,7 @@ fn json_multi_column() {
     }
     let output = cmd()
         .args([
-            "--output-format",
+            "--output",
             "json",
             "RETURN 'a' as x, 'b' as y, 'c' as z",
         ])
@@ -415,7 +415,7 @@ fn json_with_params() {
         return;
     }
     let output = cmd()
-        .args(["--output-format", "json", "-p", "x=42", "RETURN $x as val"])
+        .args(["--output", "json", "-p", "x=42", "RETURN $x as val"])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -432,7 +432,7 @@ fn json_null_values() {
         return;
     }
     let output = cmd()
-        .args(["--output-format", "json", "RETURN null as x, 1 as y"])
+        .args(["--output", "json", "RETURN null as x, 1 as y"])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -451,7 +451,7 @@ fn json_empty_result_set() {
     }
     let output = cmd()
         .args([
-            "--output-format",
+            "--output",
             "json",
             "MATCH (n:DoesNotExist99999) RETURN n",
         ])

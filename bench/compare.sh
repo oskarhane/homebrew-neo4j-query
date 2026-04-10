@@ -44,7 +44,7 @@ run_timed() {
   local cypher="$3"
   local start end
   start=$(perl -MTime::HiRes=time -e 'printf "%.0f\n", time*1000')
-  "$NQ" "${NEO4J_ARGS[@]}" --output-format "$format" "$cypher" > "$outfile" 2>/dev/null
+  "$NQ" "${NEO4J_ARGS[@]}" --output "$format" "$cypher" > "$outfile" 2>/dev/null
   end=$(perl -MTime::HiRes=time -e 'printf "%.0f\n", time*1000')
   echo $(( end - start ))
 }
@@ -69,8 +69,8 @@ for entry in "${QUERIES[@]}"; do
   toon_file="$TMPDIR_BENCH/${name}_toon.out"
 
   # Size/token measurement (single run, capture output)
-  "$NQ" "${NEO4J_ARGS[@]}" --output-format json "$cypher" > "$json_file" 2>/dev/null
-  "$NQ" "${NEO4J_ARGS[@]}" --output-format toon "$cypher" > "$toon_file" 2>/dev/null
+  "$NQ" "${NEO4J_ARGS[@]}" --output json "$cypher" > "$json_file" 2>/dev/null
+  "$NQ" "${NEO4J_ARGS[@]}" --output toon "$cypher" > "$toon_file" 2>/dev/null
 
   read _ json_tokens <<< "$("$TC" < "$json_file")"
   read _ toon_tokens <<< "$("$TC" < "$toon_file")"

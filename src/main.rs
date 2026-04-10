@@ -45,7 +45,7 @@ struct Cli {
 
     /// Output format
     #[arg(long, value_enum, default_value = "toon")]
-    output_format: OutputFormat,
+    output: OutputFormat,
 }
 
 fn resolve_query(arg: Option<String>) -> Result<String, String> {
@@ -441,7 +441,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 let data = parsed.data.ok_or("no data in response")?;
                 let records = rows_to_records(&data.fields, &data.values)?;
-                let output = match cli.output_format {
+                let output = match cli.output {
                     OutputFormat::Json => serde_json::to_string(&records)?,
                     OutputFormat::Toon => toon_format::encode_default(&records)?,
                 };
