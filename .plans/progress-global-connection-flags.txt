@@ -1,0 +1,53 @@
+================================================================================
+TASK-001: Make ConnectionArgs fields global and simplify Schema variant
+Date: 2026-04-10T12:00:00Z
+================================================================================
+
+Summary:
+Added `global = true` to all 5 ConnectionArgs fields so connection flags work
+before, after, or split around subcommands. Simplified Schema to a unit variant.
+
+Files Changed:
+- src/main.rs (modified: added global=true to ConnectionArgs fields, made Schema unit variant, updated run() match arm)
+
+Key Decisions:
+- ConnectionArgs stays flattened into QueryArgs; global propagation handles subcommands
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Add cmd_no_neo4j helper and schema flag-position tests
+Date: 2026-04-10T12:10:00Z
+================================================================================
+
+Summary:
+Added cmd_no_neo4j() helper and 9 schema flag-position tests verifying global
+connection flags work before, after, and split around the schema subcommand.
+
+Files Changed:
+- tests/integration.rs (modified: added cmd_no_neo4j helper and 9 tests)
+
+Key Decisions:
+- Tests assert failure + no "password" in stderr to confirm clap parsed the flag correctly
+- All tests are non-ignored (no Neo4j needed), using dead port localhost:19999
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Add query-mode and skill subcommand regression tests
+Date: 2026-04-10T12:20:00Z
+================================================================================
+
+Summary:
+Added 4 regression tests ensuring global connection flags don't break query mode,
+mixed flags, skill subcommand, or schema password requirement.
+
+Files Changed:
+- tests/integration.rs (modified: added 4 regression tests)
+
+Key Decisions:
+- query_mode tests reuse cmd_no_neo4j() helper, assert no "password" error
+- skill_list test uses raw Command to verify it works without NEO4J_PASSWORD
+- schema_without_password test confirms password is still required for schema
+
+Next Task: All tasks complete
