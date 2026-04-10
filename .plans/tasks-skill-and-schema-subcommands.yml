@@ -1,0 +1,111 @@
+feature: skill-and-schema-subcommands
+prd: ./prd-skill-and-schema-subcommands.md
+created_at: 2026-04-10T12:00:00Z
+updated_at: 2026-04-10T12:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Restructure clap CLI to support subcommands alongside positional query arg"
+    description: |
+      Refactor the Cli struct in src/main.rs to support optional subcommands while preserving the existing positional query behavior. Extract connection args (--uri, -u, -p, --db, --env) into a shared ConnectionArgs struct. Create a QueryArgs struct (connection + query + params + format). Add a Commands enum with Skill and Schema variants. Use args_conflicts_with_subcommands = true. Schema variant flattens ConnectionArgs. Route execution based on whether a subcommand is present or not.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "Cli struct has Optional<Commands> subcommand field"
+      - "ConnectionArgs struct shared between query mode and schema subcommand"
+      - "neo4j-query \"RETURN 1\" still works (query mode unchanged)"
+      - "neo4j-query schema runs schema introspection with connection flags"
+      - ".schema magic string handling removed — neo4j-query .schema fails"
+      - "cargo build compiles, cargo test passes"
+    completed_at: null
+
+  - id: task-002
+    title: "Create src/skill.rs with agent detection and canonical path resolution"
+    description: |
+      Add a new src/skill.rs module with the agent registry (11 agents: claude-code, cursor, windsurf, copilot, gemini-cli, cline, roo, codex, pi, opencode, junie) and detection logic. Each agent has a name, display name, detect dir, and skills dir. Detection checks if the global config dir exists via fs::metadata(). Resolve ~ to home dir and $XDG_CONFIG_HOME (default ~/.config) for opencode. Export detect_agents() returning matched agents. Define the canonical path as ~/.local/share/neo4j-query/skills/neo4j-query/.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "AGENTS static array contains all 11 agents with correct detect/skills dirs"
+      - "detect_agents() returns only agents whose detect dir exists"
+      - "$XDG_CONFIG_HOME resolved with ~/.config fallback for opencode"
+      - "~ expanded to actual home directory in all paths"
+      - "Module declared in main.rs with mod skill"
+    completed_at: null
+
+  - id: task-003
+    title: "Implement skill install with symlink and copy fallback"
+    description: |
+      Add install() function to src/skill.rs. Embed SKILL.md content via include_str!("../skills/neo4j-query/SKILL.md"). Create the canonical dir (~/.local/share/neo4j-query/skills/neo4j-query/), write SKILL.md there. For each target agent, create parent skills dir if needed, remove existing target (symlink/file/dir), then create a symlink pointing to canonical dir. If symlink fails, fall back to copying the directory. Print one line per agent on success. If no agents detected and no --agent filter, print error to stderr and exit 1.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Canonical SKILL.md written to ~/.local/share/neo4j-query/skills/neo4j-query/SKILL.md"
+      - "Symlink created from each agent's skills dir to canonical dir"
+      - "Existing skill (file/dir/symlink) removed before recreating"
+      - "Falls back to directory copy if symlink creation fails"
+      - "Prints 'installed neo4j-query skill for <DisplayName> → <path>' per agent"
+      - "Prints error and exits 1 when no agents detected and no --agent flag"
+    completed_at: null
+
+  - id: task-004
+    title: "Implement skill remove and skill list subcommands"
+    description: |
+      Add remove() and list() functions to src/skill.rs. remove() deletes the symlink or directory at each agent's skill path, optionally filtered by --agent. If no agents have the skill installed after removal, also remove the canonical dir. list() iterates all 11 known agents, checks if detected (config dir exists) and if the skill is installed (skill dir/symlink exists), then prints a formatted table or list.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "skill remove deletes symlinks/dirs from all detected agents"
+      - "skill remove --agent claude-code only removes Claude Code's symlink"
+      - "Canonical dir removed when no agents have the skill installed"
+      - "skill list shows all 11 agents with detected and installed status"
+      - "skill list works even when no agents are detected (shows all as not detected)"
+    completed_at: null
+
+  - id: task-005
+    title: "Wire skill subcommands into main.rs command routing"
+    description: |
+      Connect the Commands::Skill variant to the skill module functions. The Skill variant contains a SkillAction sub-enum with Install, Remove, and List. Install and Remove accept an optional --agent flag. Route each action to the corresponding function in src/skill.rs. Ensure the skill subcommands don't require database connection flags (they're filesystem-only operations).
+    status: pending
+    dependencies:
+      - task-001
+      - task-004
+    acceptance_criteria:
+      - "neo4j-query skill install calls skill::install()"
+      - "neo4j-query skill remove calls skill::remove()"
+      - "neo4j-query skill list calls skill::list()"
+      - "--agent flag parsed and passed through for install and remove"
+      - "Skill subcommands work without --password or other connection flags"
+    completed_at: null
+
+  - id: task-006
+    title: "Create skills/neo4j-query/SKILL.md embed source and update .claude skill"
+    description: |
+      Create top-level skills/neo4j-query/SKILL.md as the compile-time embed source. Copy content from .claude/skills/neo4j-query/SKILL.md, replacing all .schema references with schema (drop dot prefix). Also update .claude/skills/neo4j-query/SKILL.md with the same .schema → schema changes. Both files should have identical content after this task.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "skills/neo4j-query/SKILL.md exists with correct content"
+      - "All .schema references replaced with schema in both files"
+      - "Both SKILL.md files have identical content"
+      - "include_str!(\"../skills/neo4j-query/SKILL.md\") resolves correctly from src/"
+    completed_at: null
+
+  - id: task-007
+    title: "Update README.md and tests for new subcommands"
+    description: |
+      Update README.md: replace the Claude Code skill install section to use neo4j-query skill install as the primary method, update all .schema references to schema, update the Built-in Commands table to list schema, skill install, skill remove, skill list. Update usage examples. Update any integration tests that reference .schema to use the schema subcommand instead.
+    status: pending
+    dependencies:
+      - task-001
+      - task-005
+    acceptance_criteria:
+      - "README.md skill install section uses neo4j-query skill install"
+      - "All .schema references in README.md replaced with schema"
+      - "Built-in Commands table lists all new subcommands"
+      - "Integration tests updated from .schema to schema subcommand"
+      - "cargo test passes"
+      - "cargo test -- --ignored passes (if Neo4j available)"
+    completed_at: null
