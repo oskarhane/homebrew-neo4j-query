@@ -32,3 +32,22 @@ Key Decisions:
 - All tests are non-ignored (no Neo4j needed), using dead port localhost:19999
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Add query-mode and skill subcommand regression tests
+Date: 2026-04-10T12:20:00Z
+================================================================================
+
+Summary:
+Added 4 regression tests ensuring global connection flags don't break query mode,
+mixed flags, skill subcommand, or schema password requirement.
+
+Files Changed:
+- tests/integration.rs (modified: added 4 regression tests)
+
+Key Decisions:
+- query_mode tests reuse cmd_no_neo4j() helper, assert no "password" error
+- skill_list test uses raw Command to verify it works without NEO4J_PASSWORD
+- schema_without_password test confirms password is still required for schema
+
+Next Task: All tasks complete

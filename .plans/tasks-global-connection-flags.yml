@@ -44,7 +44,7 @@ tasks:
       Add 4 more tests to `tests/integration.rs`: query mode with `-p` before cypher, query mode
       with `--format` and `-p` mixed, `skill list` without connection args, and `schema` without
       password still errors. These ensure globalizing connection flags doesn't break existing modes.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -53,4 +53,4 @@ tasks:
       - "Test for `skill list` succeeds without NEO4J_PASSWORD set"
       - "Test for `schema` without password fails with \"password\" in stderr"
       - "All 4 regression tests pass with `cargo test`"
-    completed_at: null
+    completed_at: 2026-04-10T12:20:00Z

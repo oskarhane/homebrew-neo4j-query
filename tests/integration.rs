@@ -602,3 +602,45 @@ fn schema_env_flag_after() {
         .failure()
         .stderr(predicate::str::contains("password").not());
 }
+
+// --- Regression tests: query-mode and skill subcommand ---
+
+#[test]
+fn query_mode_password_flag_before_cypher() {
+    cmd_no_neo4j()
+        .args(["-p", "secret", "RETURN 1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn query_mode_format_and_password_mixed() {
+    cmd_no_neo4j()
+        .args(["--format", "json", "-p", "secret", "RETURN 1"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password").not());
+}
+
+#[test]
+fn skill_list_without_password() {
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .args(["skill", "list"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn schema_without_password_errors() {
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .env("NEO4J_URI", "http://localhost:19999")
+        .arg("schema")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("password"));
+}
