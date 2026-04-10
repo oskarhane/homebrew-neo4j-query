@@ -1,6 +1,6 @@
 mod skill;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
@@ -27,7 +27,7 @@ struct ConnectionArgs {
 
     /// Neo4j password
     #[arg(short, long, env = "NEO4J_PASSWORD")]
-    password: String,
+    password: Option<String>,
 
     /// Neo4j database name
     #[arg(long = "db", env = "NEO4J_DATABASE", default_value = "neo4j")]
@@ -36,6 +36,14 @@ struct ConnectionArgs {
     /// Path to .env file to load
     #[arg(long = "env", value_name = "FILE")]
     env_file: Option<PathBuf>,
+}
+
+impl ConnectionArgs {
+    fn require_password(&self) -> Result<&str, String> {
+        self.password
+            .as_deref()
+            .ok_or_else(|| "password required: set --password, -p, or NEO4J_PASSWORD".into())
+    }
 }
 
 #[derive(Parser)]
@@ -63,7 +71,27 @@ enum Commands {
         conn: ConnectionArgs,
     },
     /// Manage AI agent skill installation
-    Skill,
+    Skill {
+        #[command(subcommand)]
+        action: SkillAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum SkillAction {
+    /// Install the neo4j-query skill for detected AI agents
+    Install(SkillArgs),
+    /// Remove the neo4j-query skill from AI agents
+    Remove(SkillArgs),
+    /// List all known AI agents and skill installation status
+    List,
+}
+
+#[derive(Args)]
+struct SkillArgs {
+    /// Target a specific agent by name
+    #[arg(long)]
+    agent: Option<String>,
 }
 
 #[derive(Parser)]
@@ -419,6 +447,7 @@ fn load_env() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>> {
     let input = resolve_query(qa.query)?;
+    let password = qa.conn.require_password()?;
 
     let url = format!(
         "{}/db/{}/query/v2",
@@ -438,7 +467,7 @@ async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>>
 
     let mut last_err = None;
     for attempt in 0..=MAX_RETRIES {
-        match execute_query(&client, &url, &qa.conn.username, &qa.conn.password, &body).await {
+        match execute_query(&client, &url, &qa.conn.username, password, &body).await {
             Ok(parsed) => {
                 if let Some(errors) = &parsed.errors {
                     if !errors.is_empty() {
@@ -494,9 +523,10 @@ async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>>
 }
 
 async fn run_schema_mode(conn: ConnectionArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let password = conn.require_password()?;
     let url = format!("{}/db/{}/query/v2", conn.uri.trim_end_matches('/'), conn.db);
     let client = reqwest::Client::new();
-    let schema = run_schema(&client, &url, &conn.username, &conn.password).await?;
+    let schema = run_schema(&client, &url, &conn.username, password).await?;
     let toon = toon_format::encode_default(&schema)?;
     println!("{toon}");
     Ok(())
@@ -508,10 +538,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Some(Commands::Schema { conn }) => run_schema_mode(conn).await,
-        Some(Commands::Skill) => {
-            eprintln!("skill subcommand not yet implemented");
-            std::process::exit(1);
-        }
+        Some(Commands::Skill { action }) => match action {
+            SkillAction::Install(args) => skill::install(args.agent.as_deref()),
+            SkillAction::Remove(args) => skill::remove(args.agent.as_deref()),
+            SkillAction::List => {
+                skill::list();
+                Ok(())
+            }
+        },
         None => run_query_mode(cli.query_args).await,
     }
 }

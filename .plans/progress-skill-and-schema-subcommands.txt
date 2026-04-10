@@ -81,3 +81,23 @@ Key Decisions:
 - list() always shows all 11 agents regardless of detection status
 
 Next Task: task-005
+
+================================================================================
+TASK-005: Wire skill subcommands into main.rs command routing
+Date: 2026-04-10T15:00:00Z
+================================================================================
+
+Summary:
+Wired Commands::Skill variant to skill module functions via SkillAction sub-enum.
+Made password optional in ConnectionArgs to allow skill subcommands without
+connection flags, added require_password() helper for query/schema modes.
+
+Files Changed:
+- src/main.rs (modified: added SkillAction enum, SkillArgs struct, made password Optional, added require_password(), updated routing)
+
+Key Decisions:
+- Made ConnectionArgs.password Option<String> so skill subcommands don't require it
+- Added require_password() helper that returns clear error message for query/schema modes
+- SkillArgs shared between Install and Remove variants for --agent flag
+
+Next Task: task-006

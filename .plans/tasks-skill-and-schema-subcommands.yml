@@ -68,7 +68,7 @@ tasks:
     title: "Wire skill subcommands into main.rs command routing"
     description: |
       Connect the Commands::Skill variant to the skill module functions. The Skill variant contains a SkillAction sub-enum with Install, Remove, and List. Install and Remove accept an optional --agent flag. Route each action to the corresponding function in src/skill.rs. Ensure the skill subcommands don't require database connection flags (they're filesystem-only operations).
-    status: pending
+    status: completed
     dependencies:
       - task-001
       - task-004
@@ -78,7 +78,7 @@ tasks:
       - "neo4j-query skill list calls skill::list()"
       - "--agent flag parsed and passed through for install and remove"
       - "Skill subcommands work without --password or other connection flags"
-    completed_at: null
+    completed_at: 2026-04-10T15:00:00Z
 
   - id: task-006
     title: "Create skills/neo4j-query/SKILL.md embed source and update .claude skill"
