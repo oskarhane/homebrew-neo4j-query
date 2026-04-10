@@ -63,12 +63,6 @@ static AGENTS: &[Agent] = &[
         skills_dir: "~/.agents/skills",
     },
     Agent {
-        name: "roo",
-        display_name: "Roo",
-        detect_dir: "~/.roo",
-        skills_dir: "~/.roo/skills",
-    },
-    Agent {
         name: "codex",
         display_name: "Codex",
         detect_dir: "~/.codex",
@@ -243,12 +237,13 @@ fn is_skill_installed(agent: &Agent) -> bool {
 }
 
 /// Remove the neo4j-query skill from detected (or filtered) agents.
+/// Without --agent, removes from ALL agents that have the skill installed.
 pub fn remove(agent_filter: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let targets: Vec<&Agent> = if let Some(name) = agent_filter {
         let agent = find_agent(name).ok_or_else(|| format!("unknown agent '{name}'"))?;
         vec![agent]
     } else {
-        detect_agents()
+        AGENTS.iter().filter(|a| is_skill_installed(a)).collect()
     };
 
     let mut removed_any = false;
