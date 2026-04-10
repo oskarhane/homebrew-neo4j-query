@@ -8,7 +8,7 @@ argument-hint: "[cypher query]"
 
 # Neo4j Query
 
-Query Neo4j databases using `neo4j-query`. Output is in TOON format (compact, token-efficient).
+Query Neo4j databases using `neo4j-query`. Connects via Neo4j's **HTTP API** (not Bolt). Default ports: `http://<host>:7474` or `https://<host>:7473`. When the user says "check my local neo4j" or similar, use `http://localhost:7474` unless they specify otherwise. Output is in TOON format (compact, token-efficient).
 
 ## Prerequisites
 
