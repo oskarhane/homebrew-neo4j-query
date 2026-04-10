@@ -84,14 +84,14 @@ tasks:
     title: "Create skills/neo4j-query/SKILL.md embed source and update .claude skill"
     description: |
       Create top-level skills/neo4j-query/SKILL.md as the compile-time embed source. Copy content from .claude/skills/neo4j-query/SKILL.md, replacing all .schema references with schema (drop dot prefix). Also update .claude/skills/neo4j-query/SKILL.md with the same .schema → schema changes. Both files should have identical content after this task.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "skills/neo4j-query/SKILL.md exists with correct content"
       - "All .schema references replaced with schema in both files"
       - "Both SKILL.md files have identical content"
       - "include_str!(\"../skills/neo4j-query/SKILL.md\") resolves correctly from src/"
-    completed_at: null
+    completed_at: 2026-04-10T15:30:00Z
 
   - id: task-007
     title: "Update README.md and tests for new subcommands"

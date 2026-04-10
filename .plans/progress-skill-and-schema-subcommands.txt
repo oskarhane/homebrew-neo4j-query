@@ -101,3 +101,23 @@ Key Decisions:
 - SkillArgs shared between Install and Remove variants for --agent flag
 
 Next Task: task-006
+
+================================================================================
+TASK-006: Create skills/neo4j-query/SKILL.md embed source and update .claude skill
+Date: 2026-04-10T15:30:00Z
+================================================================================
+
+Summary:
+Replaced all .schema references with schema (subcommand form) in both
+skills/neo4j-query/SKILL.md and .claude/skills/neo4j-query/SKILL.md.
+Both files are now identical. The embed source was already created in task-003.
+
+Files Changed:
+- skills/neo4j-query/SKILL.md (modified: .schema → schema in 5 locations)
+- .claude/skills/neo4j-query/SKILL.md (modified: same .schema → schema changes)
+
+Key Decisions:
+- Changed ".schema command" to "schema subcommand" for clarity
+- Both files verified identical via diff
+
+Next Task: task-007

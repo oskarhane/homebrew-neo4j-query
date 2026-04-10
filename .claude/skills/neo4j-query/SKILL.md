@@ -26,13 +26,13 @@ Priority: CLI flags > env vars > `.env` file. Use `--env path` to load a specifi
 
 ## CRITICAL: Fetch schema before generating Cypher
 
-**Before generating ANY Cypher yourself, ALWAYS run `.schema` first** to understand the database structure. Do not guess label names, relationship types, or property names — get them from the schema. If the user provides a Cypher query directly, just execute it — no need to fetch schema first.
+**Before generating ANY Cypher yourself, ALWAYS run `schema` first** to understand the database structure. Do not guess label names, relationship types, or property names — get them from the schema. If the user provides a Cypher query directly, just execute it — no need to fetch schema first.
 
 ```bash
-neo4j-query .schema
+neo4j-query schema
 ```
 
-The `.schema` command returns a structured TOON object with:
+The `schema` subcommand returns a structured TOON object with:
 - **nodes**: every node label with its properties (name, type, mandatory flag)
 - **relationships**: every relationship type with its properties AND `paths` showing which node labels it connects (from → to)
 
@@ -94,7 +94,7 @@ neo4j-query "$ARGUMENTS"
 ```
 
 If the user asks a question about the data or asks you to explore/query **without providing Cypher**:
-1. Run `neo4j-query .schema` first
+1. Run `neo4j-query schema` first
 2. Use the schema to write the correct Cypher query
 3. Run the query
 
@@ -102,7 +102,7 @@ If the user provides a specific Cypher query, run it directly — don't fetch sc
 
 ## Tips
 
-- Run `neo4j-query .schema` before generating Cypher — never assume you know the schema
+- Run `neo4j-query schema` before generating Cypher — never assume you know the schema
 - Use `LIMIT` for exploratory queries to avoid large result sets
 - Use parameters (`-P`) for dynamic values instead of string interpolation
 - Relationship directions matter — check `paths.from` and `paths.to` in the schema output
