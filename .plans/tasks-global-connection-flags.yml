@@ -11,7 +11,7 @@ tasks:
       Change `Commands::Schema { conn: ConnectionArgs }` to a unit variant `Commands::Schema`.
       Update the `run()` match arm to pass `cli.query_args.conn` to `run_schema_mode()` instead of
       destructuring `conn` from the Schema variant.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "`ConnectionArgs` fields all have `global = true` in their `#[arg(...)]` attributes"
@@ -19,7 +19,7 @@ tasks:
       - "`run()` passes `cli.query_args.conn` to `run_schema_mode()` for the Schema branch"
       - "`cargo build` compiles without errors"
       - "`cargo clippy` produces no warnings"
-    completed_at: null
+    completed_at: 2026-04-10T12:00:00Z
 
   - id: task-002
     title: "Add cmd_no_neo4j helper and schema flag-position tests"

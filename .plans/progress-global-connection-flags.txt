@@ -1,0 +1,16 @@
+================================================================================
+TASK-001: Make ConnectionArgs fields global and simplify Schema variant
+Date: 2026-04-10T12:00:00Z
+================================================================================
+
+Summary:
+Added `global = true` to all 5 ConnectionArgs fields so connection flags work
+before, after, or split around subcommands. Simplified Schema to a unit variant.
+
+Files Changed:
+- src/main.rs (modified: added global=true to ConnectionArgs fields, made Schema unit variant, updated run() match arm)
+
+Key Decisions:
+- ConnectionArgs stays flattened into QueryArgs; global propagation handles subcommands
+
+Next Task: task-002

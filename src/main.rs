@@ -18,23 +18,39 @@ const INITIAL_BACKOFF_MS: u64 = 200;
 #[derive(Parser, Clone)]
 struct ConnectionArgs {
     /// Neo4j HTTP URI
-    #[arg(long, env = "NEO4J_URI", default_value = "http://localhost:7474")]
+    #[arg(
+        long,
+        global = true,
+        env = "NEO4J_URI",
+        default_value = "http://localhost:7474"
+    )]
     uri: String,
 
     /// Neo4j username
-    #[arg(short, long, env = "NEO4J_USERNAME", default_value = "neo4j")]
+    #[arg(
+        short,
+        long,
+        global = true,
+        env = "NEO4J_USERNAME",
+        default_value = "neo4j"
+    )]
     username: String,
 
     /// Neo4j password
-    #[arg(short, long, env = "NEO4J_PASSWORD")]
+    #[arg(short, long, global = true, env = "NEO4J_PASSWORD")]
     password: Option<String>,
 
     /// Neo4j database name
-    #[arg(long = "db", env = "NEO4J_DATABASE", default_value = "neo4j")]
+    #[arg(
+        long = "db",
+        global = true,
+        env = "NEO4J_DATABASE",
+        default_value = "neo4j"
+    )]
     db: String,
 
     /// Path to .env file to load
-    #[arg(long = "env", value_name = "FILE")]
+    #[arg(long = "env", global = true, value_name = "FILE")]
     env_file: Option<PathBuf>,
 }
 
@@ -66,10 +82,7 @@ struct QueryArgs {
 #[derive(Subcommand)]
 enum Commands {
     /// Introspect database schema
-    Schema {
-        #[command(flatten)]
-        conn: ConnectionArgs,
-    },
+    Schema,
     /// Manage AI agent skill installation
     Skill {
         #[command(subcommand)]
@@ -537,7 +550,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Schema { conn }) => run_schema_mode(conn).await,
+        Some(Commands::Schema) => run_schema_mode(cli.query_args.conn).await,
         Some(Commands::Skill { action }) => match action {
             SkillAction::Install(args) => skill::install(args.agent.as_deref()),
             SkillAction::Remove(args) => skill::remove(args.agent.as_deref()),
