@@ -1,0 +1,56 @@
+feature: global-connection-flags
+prd: ./prd-global-connection-flags.md
+created_at: 2026-04-10T12:00:00Z
+updated_at: 2026-04-10T12:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Make ConnectionArgs fields global and simplify Schema variant"
+    description: |
+      Add `global = true` to all 5 fields in `ConnectionArgs` (uri, username, password, db, env_file).
+      Change `Commands::Schema { conn: ConnectionArgs }` to a unit variant `Commands::Schema`.
+      Update the `run()` match arm to pass `cli.query_args.conn` to `run_schema_mode()` instead of
+      destructuring `conn` from the Schema variant.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "`ConnectionArgs` fields all have `global = true` in their `#[arg(...)]` attributes"
+      - "`Commands::Schema` is a unit variant with no fields"
+      - "`run()` passes `cli.query_args.conn` to `run_schema_mode()` for the Schema branch"
+      - "`cargo build` compiles without errors"
+      - "`cargo clippy` produces no warnings"
+    completed_at: null
+
+  - id: task-002
+    title: "Add cmd_no_neo4j helper and schema flag-position tests"
+    description: |
+      Add a `cmd_no_neo4j()` helper to `tests/integration.rs` that builds a command pointing at
+      a dead port (localhost:19999) with NEO4J_PASSWORD removed. Add 9 tests covering connection
+      flags before, after, and split around the `schema` subcommand — short and long forms, plus
+      `--db` and `--env` flags. Each test asserts failure without a "password" error message.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "`cmd_no_neo4j()` helper exists and removes NEO4J_PASSWORD, sets dead-port URI"
+      - "Tests cover: `-p` before schema, `-u -p` before, `-p` after, multiple flags after, split around, long `--password` before/after, `--db` with schema, `--env` after schema"
+      - "All 9 schema flag-position tests pass with `cargo test`"
+      - "Tests do not require a running Neo4j instance"
+    completed_at: null
+
+  - id: task-003
+    title: "Add query-mode and skill subcommand regression tests"
+    description: |
+      Add 4 more tests to `tests/integration.rs`: query mode with `-p` before cypher, query mode
+      with `--format` and `-p` mixed, `skill list` without connection args, and `schema` without
+      password still errors. These ensure globalizing connection flags doesn't break existing modes.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Test for `-p secret \"RETURN 1\"` passes (no password error, just connection error)"
+      - "Test for `--format json -p secret \"RETURN 1\"` passes"
+      - "Test for `skill list` succeeds without NEO4J_PASSWORD set"
+      - "Test for `schema` without password fails with \"password\" in stderr"
+      - "All 4 regression tests pass with `cargo test`"
+    completed_at: null
