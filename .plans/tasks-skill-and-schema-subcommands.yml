@@ -8,7 +8,7 @@ tasks:
     title: "Restructure clap CLI to support subcommands alongside positional query arg"
     description: |
       Refactor the Cli struct in src/main.rs to support optional subcommands while preserving the existing positional query behavior. Extract connection args (--uri, -u, -p, --db, --env) into a shared ConnectionArgs struct. Create a QueryArgs struct (connection + query + params + format). Add a Commands enum with Skill and Schema variants. Use args_conflicts_with_subcommands = true. Schema variant flattens ConnectionArgs. Route execution based on whether a subcommand is present or not.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "Cli struct has Optional<Commands> subcommand field"
@@ -17,7 +17,7 @@ tasks:
       - "neo4j-query schema runs schema introspection with connection flags"
       - ".schema magic string handling removed — neo4j-query .schema fails"
       - "cargo build compiles, cargo test passes"
-    completed_at: null
+    completed_at: 2026-04-10T12:30:00Z
 
   - id: task-002
     title: "Create src/skill.rs with agent detection and canonical path resolution"

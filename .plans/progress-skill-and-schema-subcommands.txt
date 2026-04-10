@@ -1,0 +1,21 @@
+================================================================================
+TASK-001: Restructure clap CLI to support subcommands alongside positional query arg
+Date: 2026-04-10T12:30:00Z
+================================================================================
+
+Summary:
+Refactored Cli struct to support subcommands (schema, skill) while preserving
+positional query arg behavior. Extracted ConnectionArgs, created QueryArgs,
+added Commands enum. Removed .schema magic string handling.
+
+Files Changed:
+- src/main.rs (modified: extracted ConnectionArgs/QueryArgs structs, added Commands enum, split run() into run_query_mode()/run_schema_mode(), removed .schema magic)
+- tests/integration.rs (modified: schema test uses "schema" subcommand instead of ".schema" arg)
+- bench/token_count.rs (modified: auto-formatted by cargo fmt)
+
+Key Decisions:
+- Skill variant is a placeholder that exits with error until task-005 wires it up
+- ConnectionArgs derives Clone for flexibility
+- args_conflicts_with_subcommands ensures clean separation between query mode and subcommands
+
+Next Task: task-002
