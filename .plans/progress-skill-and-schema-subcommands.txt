@@ -121,3 +121,24 @@ Key Decisions:
 - Both files verified identical via diff
 
 Next Task: task-007
+
+================================================================================
+TASK-007: Update README.md and tests for new subcommands
+Date: 2026-04-10T16:00:00Z
+================================================================================
+
+Summary:
+Updated README.md to reflect new subcommand-based CLI. Replaced all .schema
+references with schema, replaced Claude Code skill install section with
+neo4j-query skill install, renamed Built-in Commands to Subcommands table
+with all four subcommands listed. Integration tests were already updated
+in task-001.
+
+Files Changed:
+- README.md (modified: skill install section, .schema→schema, subcommands table)
+
+Key Decisions:
+- Changed "Claude Code skill" heading to "AI agent skill" since skill install supports 11 agents
+- No test changes needed — schema_command test already used "schema" subcommand from task-001
+
+Next Task: All tasks complete

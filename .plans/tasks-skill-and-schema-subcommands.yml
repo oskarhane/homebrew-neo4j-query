@@ -97,7 +97,7 @@ tasks:
     title: "Update README.md and tests for new subcommands"
     description: |
       Update README.md: replace the Claude Code skill install section to use neo4j-query skill install as the primary method, update all .schema references to schema, update the Built-in Commands table to list schema, skill install, skill remove, skill list. Update usage examples. Update any integration tests that reference .schema to use the schema subcommand instead.
-    status: pending
+    status: completed
     dependencies:
       - task-001
       - task-005
@@ -108,4 +108,4 @@ tasks:
       - "Integration tests updated from .schema to schema subcommand"
       - "cargo test passes"
       - "cargo test -- --ignored passes (if Neo4j available)"
-    completed_at: null
+    completed_at: 2026-04-10T16:00:00Z
