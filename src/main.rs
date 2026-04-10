@@ -32,8 +32,8 @@ struct Cli {
     password: String,
 
     /// Neo4j database name
-    #[arg(long, env = "NEO4J_DATABASE", default_value = "neo4j")]
-    database: String,
+    #[arg(long = "db", env = "NEO4J_DATABASE", default_value = "neo4j")]
+    db: String,
 
     /// Query parameters as key=value pairs
     #[arg(short = 'P', value_name = "KEY=VALUE")]
@@ -396,7 +396,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let url = format!(
         "{}/db/{}/query/v2",
         cli.uri.trim_end_matches('/'),
-        cli.database
+        cli.db
     );
 
     let client = reqwest::Client::new();

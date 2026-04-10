@@ -6,6 +6,7 @@ This is a single repo (`oskarhane/homebrew-neo4j-query`) that serves as both the
 
 ## Feedback Instructions
 
+- **RUN**: `cargo run --bin neo4j-query -- <args>` (multiple binaries exist; bare `cargo run` fails)
 - **BUILD**: `cargo build`
 - **TEST (unit)**: `cargo test`
 - **TEST (integration, needs Neo4j)**: `cargo test -- --ignored`

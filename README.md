@@ -84,9 +84,9 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | Env var          | Flag         | Default                  |
 |------------------|--------------|--------------------------|
 | `NEO4J_URI`      | `--uri`      | `http://localhost:7474`  |
-| `NEO4J_USERNAME`  | `--username` | `neo4j`                  |
-| `NEO4J_PASSWORD`  | `--password` | *(required)*             |
-| `NEO4J_DATABASE`  | `--database` | `neo4j`                  |
+| `NEO4J_USERNAME`  | `--username`, `-u` | `neo4j`                  |
+| `NEO4J_PASSWORD`  | `--password`, `-p` | *(required)*             |
+| `NEO4J_DATABASE`  | `--db`       | `neo4j`                  |
 | —                | `--env`      | auto-discover `.env`     |
 | —                | `--output`   | `toon`              |
 

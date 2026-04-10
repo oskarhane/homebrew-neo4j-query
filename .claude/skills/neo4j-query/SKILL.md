@@ -19,7 +19,7 @@ Query Neo4j databases using `neo4j-query`. Output is in TOON format (compact, to
 | `--uri` | `NEO4J_URI` | `http://localhost:7474` |
 | `-u` / `--username` | `NEO4J_USERNAME` | `neo4j` |
 | `-p` / `--password` | `NEO4J_PASSWORD` | *(required)* |
-| `--database` | `NEO4J_DATABASE` | `neo4j` |
+| `--db` | `NEO4J_DATABASE` | `neo4j` |
 | `--env` | — | auto-discover `.env` |
 
 Priority: CLI flags > env vars > `.env` file. Use `--env path` to load a specific env file. Prefer `-u`/`-p` over `--username`/`--password` when passing credentials on the command line.
