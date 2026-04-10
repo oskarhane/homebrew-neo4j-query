@@ -634,6 +634,46 @@ fn skill_list_without_password() {
 }
 
 #[test]
+#[ignore]
+fn schema_wrong_password() {
+    if !neo4j_available() {
+        return;
+    }
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env(
+        "NEO4J_URI",
+        std::env::var("NEO4J_TEST_URI").unwrap_or_else(|_| "http://localhost:7474".into()),
+    );
+    c.env("NEO4J_PASSWORD", "wrongpassword");
+    c.arg("schema")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("401"));
+}
+
+#[test]
+#[ignore]
+fn schema_correct_password() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd().arg("schema").assert().success();
+}
+
+#[test]
+#[ignore]
+fn query_correct_password() {
+    if !neo4j_available() {
+        return;
+    }
+    cmd()
+        .arg("RETURN 1 AS n")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("n"));
+}
+
+#[test]
 fn schema_without_password_errors() {
     Command::cargo_bin("neo4j-query")
         .unwrap()
