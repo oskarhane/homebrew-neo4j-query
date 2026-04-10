@@ -298,6 +298,25 @@ fn schema_command() {
 }
 
 #[test]
+fn subcommand_with_flags_before_it() {
+    // Regression: flags before a subcommand should not cause clap to
+    // treat the subcommand name as a positional query argument.
+    let mut tmp = tempfile::NamedTempFile::new().unwrap();
+    writeln!(tmp, "NEO4J_PASSWORD=x").unwrap();
+
+    // schema subcommand should be recognized even with --env before it
+    Command::cargo_bin("neo4j-query")
+        .unwrap()
+        .env_remove("NEO4J_PASSWORD")
+        .env("NEO4J_URI", "http://localhost:19999")
+        .args(["--env", tmp.path().to_str().unwrap(), "schema"])
+        .assert()
+        .failure()
+        // Should fail with connection error, NOT a cypher syntax error
+        .stderr(predicate::str::contains("SyntaxError").not());
+}
+
+#[test]
 #[ignore]
 fn multiple_rows() {
     if !neo4j_available() {

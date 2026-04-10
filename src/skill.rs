@@ -115,11 +115,6 @@ pub fn canonical_dir() -> Option<PathBuf> {
     Some(home.join(".local/share/neo4j-query/skills/neo4j-query"))
 }
 
-/// Return all known agents.
-pub fn all_agents() -> &'static [Agent] {
-    AGENTS
-}
-
 /// Detect which agents are present by checking if their detect_dir exists.
 pub fn detect_agents() -> Vec<&'static Agent> {
     AGENTS

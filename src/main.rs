@@ -96,7 +96,7 @@ struct SkillArgs {
 
 #[derive(Parser)]
 #[command(name = "neo4j-query", about = "Query Neo4j databases, output TOON")]
-#[command(args_conflicts_with_subcommands = true)]
+#[command(subcommand_negates_reqs = true)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
