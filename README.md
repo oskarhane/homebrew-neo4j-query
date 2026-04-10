@@ -88,7 +88,7 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | `NEO4J_PASSWORD`  | `--password`, `-p` | *(required)*             |
 | `NEO4J_DATABASE`  | `--db`       | `neo4j`                  |
 | —                | `--env`      | auto-discover `.env`     |
-| —                | `--output`   | `toon`              |
+| —                | `--format`   | `toon`              |
 
 The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
 
@@ -100,7 +100,7 @@ The `--env` flag loads a specific `.env` file. Without it, the tool searches for
 
 ## Output
 
-Results are printed to stdout in [TOON format](https://github.com/toon-format/toon-rust), a compact token-efficient serialization format. Errors go to stderr. Use `--output json` for JSON output instead.
+Results are printed to stdout in [TOON format](https://github.com/toon-format/toon-rust), a compact token-efficient serialization format. Errors go to stderr. Use `--format json` for JSON output instead.
 
 ## Development
 
@@ -119,7 +119,7 @@ docker compose -f tests/docker-compose.yml down
 
 ## Benchmarks
 
-Output defaults to [TOON](https://github.com/toon-format/toon-rust) but JSON is also supported via `--output json`. Token comparison from the recommendations dataset:
+Output defaults to [TOON](https://github.com/toon-format/toon-rust) but JSON is also supported via `--format json`. Token comparison from the recommendations dataset:
 
 | Query | JSON tokens | TOON tokens | Token % |
 |-------|------------|------------|--------|
