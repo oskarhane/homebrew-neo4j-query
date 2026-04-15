@@ -26,7 +26,8 @@ tasks:
       array with length > threshold. Takes a threshold (usize) and a closure or enum
       to determine the replacement value (string annotation for TOON, empty array for JSON).
       When threshold is 0, return immediately (no-op).
-    status: pending
+    status: completed
+    completed_at: 2026-04-15T11:00:00Z
     dependencies: []
     acceptance_criteria:
       - "Function signature is testable without Neo4j (pure fn on Value)"

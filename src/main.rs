@@ -176,6 +176,29 @@ fn parse_params(pairs: &[String]) -> Result<Map<String, Value>, String> {
     Ok(map)
 }
 
+fn truncate_arrays(value: &mut Value, threshold: usize, replacer: &dyn Fn(usize) -> Value) {
+    if threshold == 0 {
+        return;
+    }
+    match value {
+        Value::Array(arr) => {
+            if arr.len() > threshold {
+                *value = replacer(arr.len());
+            } else {
+                for item in arr.iter_mut() {
+                    truncate_arrays(item, threshold, replacer);
+                }
+            }
+        }
+        Value::Object(map) => {
+            for (_k, v) in map.iter_mut() {
+                truncate_arrays(v, threshold, replacer);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn rows_to_records(fields: &[Value], values: &[Value]) -> Result<Vec<Value>, String> {
     let field_names: Vec<&str> = fields
         .iter()

@@ -15,3 +15,22 @@ Key Decisions:
 - Help text mentions both TOON and JSON replacement modes
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Implement recursive array truncation function
+Date: 2026-04-15T11:00:00Z
+================================================================================
+
+Summary:
+Added truncate_arrays() pure function that recursively walks serde_json::Value
+in-place, replacing arrays exceeding threshold via caller-provided closure.
+
+Files Changed:
+- src/main.rs (modified: added truncate_arrays function)
+
+Key Decisions:
+- Used &dyn Fn(usize) -> Value for replacer to support both TOON and JSON modes
+- Strict > comparison so arrays at exactly threshold are kept
+- Early return on threshold==0 for no-op behavior
+
+Next Task: task-003
