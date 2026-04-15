@@ -1,0 +1,17 @@
+================================================================================
+TASK-001: Add --truncate-arrays-over CLI flag to QueryArgs
+Date: 2026-04-15T10:45:00Z
+================================================================================
+
+Summary:
+Added --truncate-arrays-over flag to QueryArgs struct with clap derive.
+Default 100, type usize, 0 disables. Help text explains full replacement behavior.
+
+Files Changed:
+- src/main.rs (modified: added truncate_arrays_over field to QueryArgs)
+
+Key Decisions:
+- Used usize type matching PRD spec
+- Help text mentions both TOON and JSON replacement modes
+
+Next Task: task-002

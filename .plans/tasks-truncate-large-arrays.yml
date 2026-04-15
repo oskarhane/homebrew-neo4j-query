@@ -10,7 +10,8 @@ tasks:
       Add a `--truncate-arrays-over` flag to the `QueryArgs` struct with clap derive.
       Default value 100, type usize. 0 means disabled. Include a clear help description
       that explains arrays exceeding this length are fully replaced, not trimmed.
-    status: pending
+    status: completed
+    completed_at: 2026-04-15T10:45:00Z
     dependencies: []
     acceptance_criteria:
       - "Flag parses correctly with `--truncate-arrays-over 50`"

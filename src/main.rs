@@ -77,6 +77,11 @@ struct QueryArgs {
     /// Output format
     #[arg(long, value_enum, default_value = "toon")]
     format: OutputFormat,
+
+    /// Replace arrays longer than N items (0 to disable, default 100).
+    /// TOON shows "[array truncated: N items]", JSON uses [].
+    #[arg(long, default_value = "100")]
+    truncate_arrays_over: usize,
 }
 
 #[derive(Subcommand)]
