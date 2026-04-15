@@ -1,0 +1,96 @@
+feature: truncate-large-arrays
+prd: ./prd-truncate-large-arrays.md
+created_at: 2026-04-15T10:30:00Z
+updated_at: 2026-04-15T10:30:00Z
+
+tasks:
+  - id: task-001
+    title: "Add --truncate-arrays-over CLI flag to QueryArgs"
+    description: |
+      Add a `--truncate-arrays-over` flag to the `QueryArgs` struct with clap derive.
+      Default value 100, type usize. 0 means disabled. Include a clear help description
+      that explains arrays exceeding this length are fully replaced, not trimmed.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "Flag parses correctly with `--truncate-arrays-over 50`"
+      - "Default value is 100 when flag is omitted"
+      - "`--truncate-arrays-over 0` parses as 0 (disabled)"
+      - "`neo4j-query --help` shows the flag with description"
+
+  - id: task-002
+    title: "Implement recursive array truncation function"
+    description: |
+      Write a pure function that walks a `serde_json::Value` in-place and replaces any
+      array with length > threshold. Takes a threshold (usize) and a closure or enum
+      to determine the replacement value (string annotation for TOON, empty array for JSON).
+      When threshold is 0, return immediately (no-op).
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "Function signature is testable without Neo4j (pure fn on Value)"
+      - "Recurses into objects and arrays at arbitrary depth"
+      - "Arrays at exactly threshold length are NOT truncated"
+      - "Arrays at threshold+1 ARE truncated"
+      - "Threshold 0 leaves all values unchanged"
+
+  - id: task-003
+    title: "Wire truncation into run_query_mode"
+    description: |
+      Call the truncation function on each record in the `Vec<Value>` returned by
+      `rows_to_records`, before the format branch. Use `OutputFormat` to determine
+      replacement: TOON gets `Value::String("[array truncated: N items]")`, JSON gets
+      `Value::Array(vec![])`. Skip when threshold is 0.
+    status: pending
+    dependencies:
+      - task-001
+      - task-002
+    acceptance_criteria:
+      - "TOON output shows `[array truncated: N items]` for oversized arrays"
+      - "JSON output shows `[]` for oversized arrays"
+      - "Small arrays pass through unchanged in both modes"
+      - "Threshold 0 produces identical output to pre-feature behavior"
+
+  - id: task-004
+    title: "Add unit tests for truncation function"
+    description: |
+      Re-implement the truncation function in `tests/unit.rs` (following existing pattern)
+      and add tests covering: no truncation needed, top-level array over threshold, nested
+      array in object, deeply nested (3+ levels), exact boundary (N vs N+1), threshold=0,
+      and both replacement modes (string annotation vs empty array).
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Tests cover all cases listed in REQ-NF-002"
+      - "Both TOON (string) and JSON (empty array) replacement modes tested"
+      - "All tests pass with `cargo test`"
+
+  - id: task-005
+    title: "Add integration tests for truncation with real Neo4j"
+    description: |
+      Add `#[ignore]` integration tests in `tests/integration.rs` that use `RETURN range(0, N)`
+      to produce large arrays. Test both TOON and JSON output modes with the
+      `--truncate-arrays-over` flag. Also test `--truncate-arrays-over 0` passes arrays through.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "TOON test: large array replaced with truncation annotation string"
+      - "JSON test: large array replaced with empty array `[]`"
+      - "Disable test: `--truncate-arrays-over 0` outputs full array"
+      - "All integration tests pass with `cargo test -- --ignored` against docker Neo4j"
+
+  - id: task-006
+    title: "Update README, skill files, and AGENTS.md if needed"
+    description: |
+      Document the `--truncate-arrays-over` flag in README.md (usage section). Update both
+      skill files (`skills/neo4j-query/SKILL.md` and `.claude/skills/neo4j-query/SKILL.md`)
+      to mention the flag. Both skill copies must stay in sync per AGENTS.md convention.
+    status: pending
+    dependencies:
+      - task-003
+    acceptance_criteria:
+      - "README documents the flag, default value, and 0-disables behavior"
+      - "Both skill files mention the flag and are identical in relevant sections"
+      - "`cargo build` still compiles (skill file embedded at compile time)"
