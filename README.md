@@ -71,6 +71,10 @@ neo4j-query -P name=Alice "MATCH (n:Person {name: \$name}) RETURN n"
 
 # Schema introspection
 neo4j-query schema
+
+# Truncate large arrays (e.g. embedding vectors)
+# Default: arrays > 100 items are replaced. Use 0 to disable.
+neo4j-query --truncate-arrays-over 50 "MATCH (n) RETURN n LIMIT 5"
 ```
 
 ## Configuration
@@ -85,6 +89,7 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | `NEO4J_DATABASE`  | `--db`       | `neo4j`                  |
 | —                | `--env`      | auto-discover `.env`     |
 | —                | `--format`   | `toon`              |
+| —                | `--truncate-arrays-over` | `100` (0 disables) |
 
 The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
 

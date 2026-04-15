@@ -1,0 +1,114 @@
+================================================================================
+TASK-001: Add --truncate-arrays-over CLI flag to QueryArgs
+Date: 2026-04-15T10:45:00Z
+================================================================================
+
+Summary:
+Added --truncate-arrays-over flag to QueryArgs struct with clap derive.
+Default 100, type usize, 0 disables. Help text explains full replacement behavior.
+
+Files Changed:
+- src/main.rs (modified: added truncate_arrays_over field to QueryArgs)
+
+Key Decisions:
+- Used usize type matching PRD spec
+- Help text mentions both TOON and JSON replacement modes
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Implement recursive array truncation function
+Date: 2026-04-15T11:00:00Z
+================================================================================
+
+Summary:
+Added truncate_arrays() pure function that recursively walks serde_json::Value
+in-place, replacing arrays exceeding threshold via caller-provided closure.
+
+Files Changed:
+- src/main.rs (modified: added truncate_arrays function)
+
+Key Decisions:
+- Used &dyn Fn(usize) -> Value for replacer to support both TOON and JSON modes
+- Strict > comparison so arrays at exactly threshold are kept
+- Early return on threshold==0 for no-op behavior
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Wire truncation into run_query_mode
+Date: 2026-04-15T11:15:00Z
+================================================================================
+
+Summary:
+Wired truncate_arrays into run_query_mode between rows_to_records and format branch.
+TOON gets "[array truncated: N items]", JSON gets []. Skipped when threshold is 0.
+
+Files Changed:
+- src/main.rs (modified: added truncation call in run_query_mode after rows_to_records)
+
+Key Decisions:
+- Used Box<dyn Fn> for replacer to match existing truncate_arrays signature
+- Guard threshold > 0 at call site for clarity, even though truncate_arrays also checks
+
+Next Task: task-004
+
+================================================================================
+TASK-004: Add unit tests for truncation function
+Date: 2026-04-15T11:30:00Z
+================================================================================
+
+Summary:
+Re-implemented truncate_arrays in tests/unit.rs and added 14 tests covering all
+required cases: no arrays, small arrays, top-level truncation (TOON+JSON),
+nested in object, deeply nested 3+ levels, exact boundary, boundary+1,
+threshold=0, mixed arrays, array-in-array, outer array exceeding threshold,
+JSON mode structure preservation, and scalar values unchanged.
+
+Files Changed:
+- tests/unit.rs (modified: added truncate_arrays re-impl, toon_replacer, json_replacer, and 14 tests)
+
+Key Decisions:
+- Followed existing pattern of re-implementing private functions in test file
+- Used helper functions toon_replacer/json_replacer to avoid repeating closures
+
+Next Task: task-005
+
+================================================================================
+TASK-005: Add integration tests for truncation with real Neo4j
+Date: 2026-04-15T12:00:00Z
+================================================================================
+
+Summary:
+Added 3 #[ignore] integration tests in tests/integration.rs testing --truncate-arrays-over
+with real Neo4j using RETURN range(0, 150) to produce 151-item arrays.
+
+Files Changed:
+- tests/integration.rs (modified: added truncate_toon_large_array, truncate_json_large_array, truncate_disabled_passes_full_array)
+
+Key Decisions:
+- Used threshold=50 (not default 100) to make test intent explicit
+- TOON test checks stdout for annotation string; JSON tests parse output as serde_json::Value
+- Disabled test verifies array length is exactly 151
+
+Next Task: task-006
+
+================================================================================
+TASK-006: Update README, skill files, and AGENTS.md if needed
+Date: 2026-04-15T12:30:00Z
+================================================================================
+
+Summary:
+Documented --truncate-arrays-over flag in README (usage examples + config table)
+and both skill files (tips section). Verified skill files stay in sync.
+
+Files Changed:
+- README.md (modified: added flag to usage examples and configuration table)
+- skills/neo4j-query/SKILL.md (modified: added truncation tip)
+- .claude/skills/neo4j-query/SKILL.md (modified: added truncation tip, identical to above)
+
+Key Decisions:
+- Added to Tips section in skill files rather than a new section (consistent with existing format)
+- No AGENTS.md changes needed (no new gotchas discovered)
+
+Next Task: All tasks complete

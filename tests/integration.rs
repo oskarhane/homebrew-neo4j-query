@@ -673,6 +673,75 @@ fn query_correct_password() {
         .stdout(predicate::str::contains("n"));
 }
 
+// --- Truncate large arrays integration tests ---
+
+#[test]
+#[ignore]
+fn truncate_toon_large_array() {
+    if !neo4j_available() {
+        return;
+    }
+    // range(0, 150) produces 151 items, exceeding default threshold of 100
+    cmd()
+        .args([
+            "--truncate-arrays-over",
+            "50",
+            "RETURN range(0, 150) AS arr",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[array truncated: 151 items]"));
+}
+
+#[test]
+#[ignore]
+fn truncate_json_large_array() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args([
+            "--format",
+            "json",
+            "--truncate-arrays-over",
+            "50",
+            "RETURN range(0, 150) AS arr",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    // Truncated array should be empty array
+    assert_eq!(parsed[0]["arr"], Value::Array(vec![]));
+}
+
+#[test]
+#[ignore]
+fn truncate_disabled_passes_full_array() {
+    if !neo4j_available() {
+        return;
+    }
+    let output = cmd()
+        .args([
+            "--format",
+            "json",
+            "--truncate-arrays-over",
+            "0",
+            "RETURN range(0, 150) AS arr",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    // With truncation disabled, full array should be present
+    let arr = parsed[0]["arr"].as_array().expect("arr should be array");
+    assert_eq!(arr.len(), 151);
+}
+
 #[test]
 fn schema_without_password_errors() {
     Command::cargo_bin("neo4j-query")

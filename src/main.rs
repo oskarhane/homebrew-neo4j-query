@@ -77,6 +77,11 @@ struct QueryArgs {
     /// Output format
     #[arg(long, value_enum, default_value = "toon")]
     format: OutputFormat,
+
+    /// Replace arrays longer than N items (0 to disable, default 100).
+    /// TOON shows "[array truncated: N items]", JSON uses [].
+    #[arg(long, default_value = "100")]
+    truncate_arrays_over: usize,
 }
 
 #[derive(Subcommand)]
@@ -169,6 +174,29 @@ fn parse_params(pairs: &[String]) -> Result<Map<String, Value>, String> {
         map.insert(k.to_string(), parse_param_value(v));
     }
     Ok(map)
+}
+
+fn truncate_arrays(value: &mut Value, threshold: usize, replacer: &dyn Fn(usize) -> Value) {
+    if threshold == 0 {
+        return;
+    }
+    match value {
+        Value::Array(arr) => {
+            if arr.len() > threshold {
+                *value = replacer(arr.len());
+            } else {
+                for item in arr.iter_mut() {
+                    truncate_arrays(item, threshold, replacer);
+                }
+            }
+        }
+        Value::Object(map) => {
+            for (_k, v) in map.iter_mut() {
+                truncate_arrays(v, threshold, replacer);
+            }
+        }
+        _ => {}
+    }
 }
 
 fn rows_to_records(fields: &[Value], values: &[Value]) -> Result<Vec<Value>, String> {
@@ -500,7 +528,19 @@ async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>>
                 }
 
                 let data = parsed.data.ok_or("no data in response")?;
-                let records = rows_to_records(&data.fields, &data.values)?;
+                let mut records = rows_to_records(&data.fields, &data.values)?;
+                let threshold = qa.truncate_arrays_over;
+                if threshold > 0 {
+                    let replacer: Box<dyn Fn(usize) -> Value> = match qa.format {
+                        OutputFormat::Toon => {
+                            Box::new(|n| Value::String(format!("[array truncated: {n} items]")))
+                        }
+                        OutputFormat::Json => Box::new(|_| Value::Array(vec![])),
+                    };
+                    for record in &mut records {
+                        truncate_arrays(record, threshold, &*replacer);
+                    }
+                }
                 let formatted = match qa.format {
                     OutputFormat::Json => serde_json::to_string(&records)?,
                     OutputFormat::Toon => toon_format::encode_default(&records)?,
