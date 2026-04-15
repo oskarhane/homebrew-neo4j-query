@@ -73,3 +73,22 @@ Key Decisions:
 - Used helper functions toon_replacer/json_replacer to avoid repeating closures
 
 Next Task: task-005
+
+================================================================================
+TASK-005: Add integration tests for truncation with real Neo4j
+Date: 2026-04-15T12:00:00Z
+================================================================================
+
+Summary:
+Added 3 #[ignore] integration tests in tests/integration.rs testing --truncate-arrays-over
+with real Neo4j using RETURN range(0, 150) to produce 151-item arrays.
+
+Files Changed:
+- tests/integration.rs (modified: added truncate_toon_large_array, truncate_json_large_array, truncate_disabled_passes_full_array)
+
+Key Decisions:
+- Used threshold=50 (not default 100) to make test intent explicit
+- TOON test checks stdout for annotation string; JSON tests parse output as serde_json::Value
+- Disabled test verifies array length is exactly 151
+
+Next Task: task-006

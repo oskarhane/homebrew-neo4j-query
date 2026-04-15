@@ -76,7 +76,8 @@ tasks:
       Add `#[ignore]` integration tests in `tests/integration.rs` that use `RETURN range(0, N)`
       to produce large arrays. Test both TOON and JSON output modes with the
       `--truncate-arrays-over` flag. Also test `--truncate-arrays-over 0` passes arrays through.
-    status: pending
+    status: completed
+    completed_at: 2026-04-15T12:00:00Z
     dependencies:
       - task-003
     acceptance_criteria:
