@@ -61,7 +61,8 @@ tasks:
       and add tests covering: no truncation needed, top-level array over threshold, nested
       array in object, deeply nested (3+ levels), exact boundary (N vs N+1), threshold=0,
       and both replacement modes (string annotation vs empty array).
-    status: pending
+    status: completed
+    completed_at: 2026-04-15T11:30:00Z
     dependencies:
       - task-002
     acceptance_criteria:

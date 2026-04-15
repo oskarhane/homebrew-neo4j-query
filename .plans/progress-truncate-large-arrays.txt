@@ -52,3 +52,24 @@ Key Decisions:
 - Guard threshold > 0 at call site for clarity, even though truncate_arrays also checks
 
 Next Task: task-004
+
+================================================================================
+TASK-004: Add unit tests for truncation function
+Date: 2026-04-15T11:30:00Z
+================================================================================
+
+Summary:
+Re-implemented truncate_arrays in tests/unit.rs and added 14 tests covering all
+required cases: no arrays, small arrays, top-level truncation (TOON+JSON),
+nested in object, deeply nested 3+ levels, exact boundary, boundary+1,
+threshold=0, mixed arrays, array-in-array, outer array exceeding threshold,
+JSON mode structure preservation, and scalar values unchanged.
+
+Files Changed:
+- tests/unit.rs (modified: added truncate_arrays re-impl, toon_replacer, json_replacer, and 14 tests)
+
+Key Decisions:
+- Followed existing pattern of re-implementing private functions in test file
+- Used helper functions toon_replacer/json_replacer to avoid repeating closures
+
+Next Task: task-005

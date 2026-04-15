@@ -243,3 +243,183 @@ fn mixed_errors_with_transient() {
     ];
     assert!(has_transient_error(&errors));
 }
+
+// Re-implement truncate_arrays for testing (private in main)
+fn truncate_arrays(value: &mut Value, threshold: usize, replacer: &dyn Fn(usize) -> Value) {
+    if threshold == 0 {
+        return;
+    }
+    match value {
+        Value::Array(arr) => {
+            if arr.len() > threshold {
+                *value = replacer(arr.len());
+            } else {
+                for item in arr.iter_mut() {
+                    truncate_arrays(item, threshold, replacer);
+                }
+            }
+        }
+        Value::Object(map) => {
+            for (_k, v) in map.iter_mut() {
+                truncate_arrays(v, threshold, replacer);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn toon_replacer(n: usize) -> Value {
+    Value::String(format!("[array truncated: {n} items]"))
+}
+
+fn json_replacer(_n: usize) -> Value {
+    Value::Array(vec![])
+}
+
+// --- truncate_arrays tests ---
+
+#[test]
+fn truncate_no_arrays() {
+    let mut val = json!({"name": "Alice", "age": 30});
+    let original = val.clone();
+    truncate_arrays(&mut val, 5, &toon_replacer);
+    assert_eq!(val, original);
+}
+
+#[test]
+fn truncate_small_array_unchanged() {
+    let mut val = json!({"items": [1, 2, 3]});
+    let original = val.clone();
+    truncate_arrays(&mut val, 5, &toon_replacer);
+    assert_eq!(val, original);
+}
+
+#[test]
+fn truncate_top_level_array_toon() {
+    let big: Vec<i32> = (0..150).collect();
+    let mut val = json!({"embedding": big});
+    truncate_arrays(&mut val, 100, &toon_replacer);
+    assert_eq!(val["embedding"], json!("[array truncated: 150 items]"));
+}
+
+#[test]
+fn truncate_top_level_array_json() {
+    let big: Vec<i32> = (0..150).collect();
+    let mut val = json!({"embedding": big});
+    truncate_arrays(&mut val, 100, &json_replacer);
+    assert_eq!(val["embedding"], json!([]));
+}
+
+#[test]
+fn truncate_nested_array_in_object() {
+    let big: Vec<i32> = (0..10).collect();
+    let mut val = json!({"node": {"props": {"vec": big}}});
+    truncate_arrays(&mut val, 5, &toon_replacer);
+    assert_eq!(
+        val["node"]["props"]["vec"],
+        json!("[array truncated: 10 items]")
+    );
+}
+
+#[test]
+fn truncate_deeply_nested_3_levels() {
+    let big: Vec<i32> = (0..20).collect();
+    let mut val = json!({
+        "a": {
+            "b": [
+                {"c": big}
+            ]
+        }
+    });
+    truncate_arrays(&mut val, 10, &toon_replacer);
+    assert_eq!(val["a"]["b"][0]["c"], json!("[array truncated: 20 items]"));
+}
+
+#[test]
+fn truncate_exact_boundary_not_truncated() {
+    // Array at exactly threshold length should NOT be truncated
+    let arr: Vec<i32> = (0..5).collect();
+    let mut val = json!({"arr": arr});
+    let original = val.clone();
+    truncate_arrays(&mut val, 5, &toon_replacer);
+    assert_eq!(val, original);
+}
+
+#[test]
+fn truncate_boundary_plus_one() {
+    // Array at threshold+1 SHOULD be truncated
+    let arr: Vec<i32> = (0..6).collect();
+    let mut val = json!({"arr": arr});
+    truncate_arrays(&mut val, 5, &toon_replacer);
+    assert_eq!(val["arr"], json!("[array truncated: 6 items]"));
+}
+
+#[test]
+fn truncate_threshold_zero_noop() {
+    let big: Vec<i32> = (0..200).collect();
+    let mut val = json!({"big": big});
+    let original = val.clone();
+    truncate_arrays(&mut val, 0, &toon_replacer);
+    assert_eq!(val, original);
+}
+
+#[test]
+fn truncate_multiple_arrays_mixed() {
+    let big: Vec<i32> = (0..20).collect();
+    let small = vec![1, 2, 3];
+    let mut val = json!({
+        "big": big,
+        "small": small,
+        "text": "hello"
+    });
+    truncate_arrays(&mut val, 10, &toon_replacer);
+    assert_eq!(val["big"], json!("[array truncated: 20 items]"));
+    assert_eq!(val["small"], json!([1, 2, 3]));
+    assert_eq!(val["text"], json!("hello"));
+}
+
+#[test]
+fn truncate_array_inside_array() {
+    // Inner arrays that exceed threshold should be truncated
+    let big: Vec<i32> = (0..10).collect();
+    let mut val = json!([[1, 2], big]);
+    truncate_arrays(&mut val, 5, &toon_replacer);
+    assert_eq!(val[0], json!([1, 2]));
+    assert_eq!(val[1], json!("[array truncated: 10 items]"));
+}
+
+#[test]
+fn truncate_outer_array_exceeds_threshold() {
+    // If the outer array itself exceeds threshold, it gets replaced entirely
+    let mut val = json!([1, 2, 3, 4, 5, 6]);
+    truncate_arrays(&mut val, 3, &json_replacer);
+    assert_eq!(val, json!([]));
+}
+
+#[test]
+fn truncate_json_mode_preserves_structure() {
+    let big: Vec<i32> = (0..50).collect();
+    let mut val = json!({"results": [{"embedding": big, "name": "test"}]});
+    truncate_arrays(&mut val, 10, &json_replacer);
+    assert_eq!(val["results"][0]["embedding"], json!([]));
+    assert_eq!(val["results"][0]["name"], json!("test"));
+}
+
+#[test]
+fn truncate_scalar_values_unchanged() {
+    let mut val = json!(42);
+    truncate_arrays(&mut val, 1, &toon_replacer);
+    assert_eq!(val, json!(42));
+
+    let mut val = json!("hello");
+    truncate_arrays(&mut val, 1, &toon_replacer);
+    assert_eq!(val, json!("hello"));
+
+    let mut val = json!(null);
+    truncate_arrays(&mut val, 1, &toon_replacer);
+    assert_eq!(val, json!(null));
+
+    let mut val = json!(true);
+    truncate_arrays(&mut val, 1, &toon_replacer);
+    assert_eq!(val, json!(true));
+}
