@@ -528,7 +528,19 @@ async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>>
                 }
 
                 let data = parsed.data.ok_or("no data in response")?;
-                let records = rows_to_records(&data.fields, &data.values)?;
+                let mut records = rows_to_records(&data.fields, &data.values)?;
+                let threshold = qa.truncate_arrays_over;
+                if threshold > 0 {
+                    let replacer: Box<dyn Fn(usize) -> Value> = match qa.format {
+                        OutputFormat::Toon => {
+                            Box::new(|n| Value::String(format!("[array truncated: {n} items]")))
+                        }
+                        OutputFormat::Json => Box::new(|_| Value::Array(vec![])),
+                    };
+                    for record in &mut records {
+                        truncate_arrays(record, threshold, &*replacer);
+                    }
+                }
                 let formatted = match qa.format {
                     OutputFormat::Json => serde_json::to_string(&records)?,
                     OutputFormat::Toon => toon_format::encode_default(&records)?,

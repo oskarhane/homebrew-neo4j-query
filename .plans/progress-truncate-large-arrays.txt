@@ -34,3 +34,21 @@ Key Decisions:
 - Early return on threshold==0 for no-op behavior
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Wire truncation into run_query_mode
+Date: 2026-04-15T11:15:00Z
+================================================================================
+
+Summary:
+Wired truncate_arrays into run_query_mode between rows_to_records and format branch.
+TOON gets "[array truncated: N items]", JSON gets []. Skipped when threshold is 0.
+
+Files Changed:
+- src/main.rs (modified: added truncation call in run_query_mode after rows_to_records)
+
+Key Decisions:
+- Used Box<dyn Fn> for replacer to match existing truncate_arrays signature
+- Guard threshold > 0 at call site for clarity, even though truncate_arrays also checks
+
+Next Task: task-004

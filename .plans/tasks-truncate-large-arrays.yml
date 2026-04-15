@@ -43,7 +43,8 @@ tasks:
       `rows_to_records`, before the format branch. Use `OutputFormat` to determine
       replacement: TOON gets `Value::String("[array truncated: N items]")`, JSON gets
       `Value::Array(vec![])`. Skip when threshold is 0.
-    status: pending
+    status: completed
+    completed_at: 2026-04-15T11:15:00Z
     dependencies:
       - task-001
       - task-002
