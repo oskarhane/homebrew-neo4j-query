@@ -92,3 +92,23 @@ Key Decisions:
 - Disabled test verifies array length is exactly 151
 
 Next Task: task-006
+
+================================================================================
+TASK-006: Update README, skill files, and AGENTS.md if needed
+Date: 2026-04-15T12:30:00Z
+================================================================================
+
+Summary:
+Documented --truncate-arrays-over flag in README (usage examples + config table)
+and both skill files (tips section). Verified skill files stay in sync.
+
+Files Changed:
+- README.md (modified: added flag to usage examples and configuration table)
+- skills/neo4j-query/SKILL.md (modified: added truncation tip)
+- .claude/skills/neo4j-query/SKILL.md (modified: added truncation tip, identical to above)
+
+Key Decisions:
+- Added to Tips section in skill files rather than a new section (consistent with existing format)
+- No AGENTS.md changes needed (no new gotchas discovered)
+
+Next Task: All tasks complete

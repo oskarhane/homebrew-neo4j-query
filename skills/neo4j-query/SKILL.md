@@ -108,3 +108,4 @@ If the user provides a specific Cypher query, run it directly — don't fetch sc
 - Relationship directions matter — check `paths.from` and `paths.to` in the schema output
 - Property types from the schema tell you whether to use string vs numeric comparisons
 - Use `--format json` if you need JSON output instead of TOON
+- Use `--truncate-arrays-over N` to replace arrays longer than N items (default 100, 0 disables). Useful for hiding embedding vectors. TOON shows `[array truncated: N items]`, JSON uses `[]`
