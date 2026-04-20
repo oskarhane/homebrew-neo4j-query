@@ -1,0 +1,64 @@
+feature: schema-indexes-and-constraints
+prd: ./prd-schema-indexes-and-constraints.md
+created_at: 2026-04-20T00:00:00Z
+updated_at: 2026-04-20T00:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Add SHOW INDEXES query + indexes array to run_schema"
+    description: |
+      Extend `run_schema` in src/main.rs (lines 292-443) to issue a `SHOW INDEXES YIELD name, type, entityType, labelsOrTypes, properties, state, owningConstraint, options` Cypher via the existing `run_cypher` helper (src/main.rs:276). Map each row into a JSON object with those fields, passing `options` through as an opaque nested Value so vector/fulltext config surfaces. Omit empty/null fields to keep TOON output compact. Sort the resulting array by `name` ascending and attach it to the returned schema JSON under a new `indexes` key (sibling to `nodes` and `relationships`). Include all indexes — no filtering of system/LOOKUP entries.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "run_schema issues SHOW INDEXES via run_cypher and maps rows into JSON objects"
+      - "Each entry carries name, type, entityType, labelsOrTypes, properties, state, owningConstraint (when set), and options (opaque pass-through)"
+      - "indexes array is sorted by name ascending"
+      - "Returned schema JSON contains indexes as a sibling to nodes/relationships"
+      - "Empty/null fields are elided from each entry"
+      - "System and LOOKUP indexes are present (not filtered)"
+    completed_at: null
+
+  - id: task-002
+    title: "Add SHOW CONSTRAINTS query + constraints array to run_schema"
+    description: |
+      Extend `run_schema` in src/main.rs to additionally issue `SHOW CONSTRAINTS YIELD name, type, entityType, labelsOrTypes, properties, ownedIndex, propertyType` via `run_cypher`. Map each row to a JSON object with those fields (pass constraint `type` through as-is — e.g. UNIQUENESS, NODE_KEY, NODE_PROPERTY_EXISTENCE). Omit empty/null fields. Sort by `name` ascending and attach under a new `constraints` key in the returned schema JSON, alongside `nodes`, `relationships`, and `indexes` from task-001.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "run_schema issues SHOW CONSTRAINTS via run_cypher and maps rows into JSON objects"
+      - "Each entry carries name, type, entityType, labelsOrTypes, properties, ownedIndex (when set), and propertyType (when set)"
+      - "constraints array is sorted by name ascending"
+      - "Returned schema JSON contains constraints as a sibling to nodes/relationships/indexes"
+      - "Constraint type values pass through unchanged (no normalization)"
+    completed_at: null
+
+  - id: task-003
+    title: "Update schema_command integration test to cover indexes & constraints"
+    description: |
+      Update `schema_command` in tests/integration.rs (lines 308-338). Before invoking `schema`, seed a uniqueness constraint and a range index: `CREATE CONSTRAINT schema_test_unique IF NOT EXISTS FOR (n:SchemaTest) REQUIRE n.x IS UNIQUE` and `CREATE INDEX schema_test_z_idx IF NOT EXISTS FOR (n:SchemaTarget) ON (n.z)`. Extend the stdout assertions to require substrings: `indexes`, `constraints`, `schema_test_unique`, `schema_test_z_idx`, `RANGE`, and a uniqueness marker (`UNIQUE`). Extend cleanup to `DROP CONSTRAINT schema_test_unique IF EXISTS` and `DROP INDEX schema_test_z_idx IF EXISTS` before the existing node deletes. Test stays `#[ignore]` and uses the existing `cmd()` helper — no new infra.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Test seeds schema_test_unique constraint and schema_test_z_idx range index"
+      - "Assertions require indexes, constraints, schema_test_unique, schema_test_z_idx, RANGE, and UNIQUE substrings in TOON output"
+      - "Cleanup drops both the constraint and the index via IF EXISTS before node deletes"
+      - "Test remains #[ignore]-gated and live-Neo4j only"
+      - "cargo test -- --ignored schema_command passes against a local Neo4j 5.x"
+    completed_at: null
+
+  - id: task-004
+    title: "Document indexes & constraints in README and SKILL.md copies"
+    description: |
+      Add a one-line note to the schema section of README.md (~line 211) that `schema` output now includes `indexes` and `constraints`. Mirror the same note in both agent-facing copies: `skills/neo4j-query/SKILL.md` (compile-time embed source) and `.claude/skills/neo4j-query/SKILL.md` (installed copy). Keep wording consistent across all three files.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "README.md schema section mentions indexes and constraints in output"
+      - "skills/neo4j-query/SKILL.md mentions indexes and constraints"
+      - ".claude/skills/neo4j-query/SKILL.md mentions indexes and constraints"
+      - "Wording is consistent across the three files"
+    completed_at: null
