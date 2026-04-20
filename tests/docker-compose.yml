@@ -11,3 +11,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+
+  ollama:
+    image: ollama/ollama:0.5.4
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

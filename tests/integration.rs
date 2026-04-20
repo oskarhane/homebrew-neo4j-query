@@ -17,6 +17,37 @@ fn neo4j_available() -> bool {
         || std::net::TcpStream::connect("127.0.0.1:7474").is_ok()
 }
 
+fn ollama_available() -> bool {
+    std::env::var("OLLAMA_TEST_URL").is_ok()
+        || std::net::TcpStream::connect("127.0.0.1:11434").is_ok()
+}
+
+/// Base command wired for embed subcommand tests (no Neo4j needed).
+/// Uses Ollama on default localhost port unless OLLAMA_TEST_URL overrides.
+fn embed_cmd() -> Command {
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env_remove("NEO4J_PASSWORD");
+    c.env("NEO4J_EMBED_PROVIDER", "ollama");
+    c.env("NEO4J_EMBED_MODEL", "all-minilm");
+    c.env(
+        "NEO4J_EMBED_BASE_URL",
+        std::env::var("OLLAMA_TEST_URL").unwrap_or_else(|_| "http://localhost:11434".into()),
+    );
+    c
+}
+
+/// Base command wired for query-mode tests that also need embeddings.
+fn cmd_with_embed() -> Command {
+    let mut c = cmd();
+    c.env("NEO4J_EMBED_PROVIDER", "ollama");
+    c.env("NEO4J_EMBED_MODEL", "all-minilm");
+    c.env(
+        "NEO4J_EMBED_BASE_URL",
+        std::env::var("OLLAMA_TEST_URL").unwrap_or_else(|_| "http://localhost:11434".into()),
+    );
+    c
+}
+
 fn cmd() -> Command {
     let mut c = Command::cargo_bin("neo4j-query").unwrap();
     c.env(
@@ -752,4 +783,300 @@ fn schema_without_password_errors() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("password"));
+}
+
+// --- Embedding integration tests (require Ollama with all-minilm pulled) ---
+
+/// all-minilm (sentence-transformers/all-MiniLM-L6-v2) returns 384-dim vectors.
+const ALL_MINILM_DIMS: usize = 384;
+
+#[test]
+#[ignore]
+fn embed_subcommand_json_output() {
+    if !ollama_available() {
+        eprintln!("skipping: ollama not available");
+        return;
+    }
+    let output = embed_cmd().args(["embed", "hello"]).output().unwrap();
+    assert!(
+        output.status.success(),
+        "embed failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<f32> = serde_json::from_str(stdout.trim()).expect("valid JSON array of floats");
+    assert_eq!(parsed.len(), ALL_MINILM_DIMS);
+}
+
+#[test]
+#[ignore]
+fn embed_subcommand_stdin() {
+    if !ollama_available() {
+        eprintln!("skipping: ollama not available");
+        return;
+    }
+    let output = embed_cmd()
+        .arg("embed")
+        .write_stdin("hello")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "embed failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<f32> = serde_json::from_str(stdout.trim()).expect("valid JSON array of floats");
+    assert_eq!(parsed.len(), ALL_MINILM_DIMS);
+}
+
+#[test]
+#[ignore]
+fn embed_subcommand_raw_format_line_count() {
+    if !ollama_available() {
+        eprintln!("skipping: ollama not available");
+        return;
+    }
+    let output = embed_cmd()
+        .args(["embed", "--format", "raw", "hello"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "embed failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    // One float per line. Trim a potential trailing newline then count.
+    let line_count = stdout.trim_end_matches('\n').lines().count();
+    assert_eq!(line_count, ALL_MINILM_DIMS);
+}
+
+#[test]
+#[ignore]
+fn query_mode_embed_param_roundtrip() {
+    if !neo4j_available() || !ollama_available() {
+        eprintln!("skipping: neo4j or ollama not available");
+        return;
+    }
+    // $v is the embedding vector; SIZE($v) returns its length (= 384 for all-minilm).
+    let output = cmd_with_embed()
+        .args([
+            "--format",
+            "json",
+            "-P",
+            "v:embed=hello",
+            "RETURN size($v) AS n",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "query failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0]["n"], ALL_MINILM_DIMS);
+}
+
+#[test]
+#[ignore]
+fn query_mode_mixed_literal_and_embed_params() {
+    if !neo4j_available() || !ollama_available() {
+        eprintln!("skipping: neo4j or ollama not available");
+        return;
+    }
+    // x stays an integer (literal path), v is an embedding vector (embed path).
+    let output = cmd_with_embed()
+        .args([
+            "--format",
+            "json",
+            "-P",
+            "x=42",
+            "-P",
+            "v:embed=hello",
+            "RETURN $x AS x, size($v) AS n",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "query failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<Value> = serde_json::from_str(&stdout).expect("valid JSON array");
+    assert_eq!(parsed.len(), 1);
+    // Integer literal preserved as integer (not a string).
+    assert_eq!(parsed[0]["x"], 42);
+    assert!(parsed[0]["x"].is_i64());
+    assert_eq!(parsed[0]["n"], ALL_MINILM_DIMS);
+}
+
+// --- Embedding error-path tests (no Neo4j, no Ollama required) ---
+//
+// Asserts the exact REQ-F-011 error strings. Each test strips embed-related
+// env vars so a dev with NEO4J_EMBED_* already exported in their shell
+// doesn't mask the failure mode under test.
+
+fn embed_env_clean() -> Command {
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env_remove("NEO4J_EMBED_PROVIDER");
+    c.env_remove("NEO4J_EMBED_MODEL");
+    c.env_remove("NEO4J_EMBED_DIMENSIONS");
+    c.env_remove("NEO4J_EMBED_BASE_URL");
+    c.env_remove("NEO4J_EMBED_API_KEY");
+    c.env_remove("OPENAI_API_KEY");
+    c
+}
+
+#[test]
+fn embed_missing_provider_errors() {
+    // Password present so we get past require_password and into param resolution.
+    let mut c = embed_env_clean();
+    c.env("NEO4J_PASSWORD", "x");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c.args(["-P", "v:embed=hello", "RETURN $v"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "embedding provider not configured: set NEO4J_EMBED_PROVIDER",
+        ));
+}
+
+#[test]
+fn embed_unknown_modifier_errors() {
+    let mut c = embed_env_clean();
+    c.env("NEO4J_PASSWORD", "x");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c.args(["-P", "v:foo=hello", "RETURN $v"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown param modifier: :foo"));
+}
+
+#[test]
+fn embed_openai_missing_api_key_errors() {
+    // Embed subcommand avoids the Neo4j password requirement entirely.
+    let mut c = embed_env_clean();
+    c.env("NEO4J_EMBED_PROVIDER", "openai");
+    c.env("NEO4J_EMBED_MODEL", "text-embedding-3-small");
+    c.args(["embed", "hello"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "missing API key for openai: set OPENAI_API_KEY",
+        ));
+}
+
+#[test]
+fn embed_unknown_provider_errors() {
+    let mut c = embed_env_clean();
+    c.env("NEO4J_EMBED_PROVIDER", "bogus");
+    c.env("NEO4J_EMBED_MODEL", "some-model");
+    c.args(["embed", "hello"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown provider: bogus"));
+}
+
+// --- CLI-flag position tests for the `embed` subcommand ---
+//
+// Regression guard: `--embed-*` flags must reach the subcommand handler
+// regardless of whether they're typed BEFORE or AFTER the `embed`
+// subcommand name. Achieved via `global = true` on each EmbedCliArgs
+// field — same pattern as ConnectionArgs.
+//
+// Probe strategy: point at an obviously unreachable base URL so Ollama
+// fails fast with its own error string. If the flag didn't reach the
+// handler we'd see "embedding provider not configured: set
+// NEO4J_EMBED_PROVIDER" (NotConfigured) instead.
+
+const UNREACHABLE_OLLAMA: &str = "http://127.0.0.1:1";
+
+#[test]
+fn embed_cli_flags_before_subcommand() {
+    let mut c = embed_env_clean();
+    c.args([
+        "--embed-provider",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--embed-base-url",
+        UNREACHABLE_OLLAMA,
+        "embed",
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("ollama unreachable"))
+    .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
+}
+
+#[test]
+fn embed_cli_flags_after_subcommand() {
+    let mut c = embed_env_clean();
+    c.args([
+        "embed",
+        "--embed-provider",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--embed-base-url",
+        UNREACHABLE_OLLAMA,
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("ollama unreachable"))
+    .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
+}
+
+#[test]
+fn embed_dimensions_flag_reaches_subcommand() {
+    // --embed-dimensions is OpenAI-only; missing key short-circuits before
+    // any HTTP call. Proves the flag is accepted at root position.
+    let mut c = embed_env_clean();
+    c.args([
+        "--embed-provider",
+        "openai",
+        "--embed-model",
+        "text-embedding-3-small",
+        "--embed-dimensions",
+        "512",
+        "embed",
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains(
+        "missing API key for openai: set OPENAI_API_KEY",
+    ));
+}
+
+#[test]
+fn query_embed_cli_flags_before_query() {
+    // `-P v:embed=...` path: flags live on QueryArgs and must work when
+    // typed before the positional query. Unreachable base URL proves
+    // the flag reached the embed resolver.
+    let mut c = embed_env_clean();
+    c.env("NEO4J_PASSWORD", "x");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c.args([
+        "--embed-provider",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--embed-base-url",
+        UNREACHABLE_OLLAMA,
+        "-P",
+        "v:embed=hello",
+        "RETURN $v",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("ollama unreachable"))
+    .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
 }

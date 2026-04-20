@@ -77,6 +77,80 @@ neo4j-query schema
 neo4j-query --truncate-arrays-over 50 "MATCH (n) RETURN n LIMIT 5"
 ```
 
+## Embeddings
+
+Generate embedding vectors inline for Neo4j vector search. Opt-in: set `NEO4J_EMBED_PROVIDER` to either `openai` or `ollama`. With no provider configured, the CLI behaves exactly as before and pays no embed cost.
+
+### `:embed` param modifier
+
+Add `:embed` to a parameter name in query mode and the CLI replaces the text with a `Vec<f32>` before sending the query:
+
+```sh
+neo4j-query -P q:embed='science fiction movies about AI' \
+  "CALL db.index.vector.queryNodes('movie_embeddings', 5, \$q)
+   YIELD node, score
+   RETURN node.title AS title, score"
+```
+
+Other `-P` params keep their normal type coercion:
+
+```sh
+neo4j-query -P k=5 -P q:embed='sci-fi movies' \
+  "CALL db.index.vector.queryNodes('movie_embeddings', \$k, \$q)
+   YIELD node, score RETURN node.title, score"
+```
+
+### `embed` subcommand
+
+Debug / scripting helper. Prints the embedding for stdin or a positional argument.
+
+```sh
+# JSON array (default)
+neo4j-query embed 'hello world'
+
+# Newline-separated floats (useful with wc -l, paste, etc.)
+neo4j-query embed --format raw 'hello world'
+
+# Stdin
+echo 'hello world' | neo4j-query embed
+```
+
+### Setup: Ollama (local, free)
+
+Run Ollama locally, pull a model, point the CLI at it:
+
+```sh
+ollama serve &
+ollama pull all-minilm
+
+cat > .env <<'EOF'
+NEO4J_URI=http://localhost:7474
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password
+NEO4J_EMBED_PROVIDER=ollama
+NEO4J_EMBED_MODEL=all-minilm
+# NEO4J_EMBED_BASE_URL=http://localhost:11434   # default
+EOF
+```
+
+No API key needed. Ollama is unreachable → error names `ollama serve`; HTTP 404 → error names `ollama pull <model>`.
+
+### Setup: OpenAI (hosted)
+
+```sh
+cat > .env <<'EOF'
+NEO4J_URI=http://localhost:7474
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password
+NEO4J_EMBED_PROVIDER=openai
+NEO4J_EMBED_MODEL=text-embedding-3-small
+# NEO4J_EMBED_DIMENSIONS=1536     # optional, OpenAI only
+OPENAI_API_KEY=sk-...
+EOF
+```
+
+`OPENAI_API_KEY` is preferred; `NEO4J_EMBED_API_KEY` is used as a fallback.
+
 ## Configuration
 
 Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI flags > env vars > `.env` file.
@@ -90,14 +164,23 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | —                | `--env`      | auto-discover `.env`     |
 | —                | `--format`   | `toon`              |
 | —                | `--truncate-arrays-over` | `100` (0 disables) |
+| `NEO4J_EMBED_PROVIDER` | `--embed-provider` | *(unset — opt-in)* |
+| `NEO4J_EMBED_MODEL` | `--embed-model` | *(required when provider set)* |
+| `NEO4J_EMBED_DIMENSIONS` | `--embed-dimensions` | *(optional, OpenAI only)* |
+| `NEO4J_EMBED_BASE_URL` | `--embed-base-url` | provider default |
+| `OPENAI_API_KEY` | — | *(required for `openai`)* |
+| `NEO4J_EMBED_API_KEY` | — | fallback for `OPENAI_API_KEY` |
 
 The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
+
+Embedding configuration is opt-in. Unset `NEO4J_EMBED_PROVIDER` means the CLI never touches embed env vars or builds an HTTP client for embeddings.
 
 ## Subcommands
 
 | Command              | Description |
 |----------------------|-------------|
 | `schema`             | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), and connection paths |
+| `embed [TEXT]`       | Embed text via the configured provider; reads stdin when `TEXT` is omitted. Use `--format json` (default) or `--format raw` (one float per line) |
 | `skill install [--agent <name>]` | Install the neo4j-query skill for detected AI agents (or a specific one) |
 | `skill remove [--agent <name>]`  | Remove the neo4j-query skill from AI agents (or a specific one) |
 | `skill list`         | List all known AI agents and skill installation status |

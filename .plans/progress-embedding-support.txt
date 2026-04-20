@@ -1,0 +1,471 @@
+================================================================================
+TASK-001: Add embed dependencies and bump version to 0.11.0
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added thiserror = "1" and async-trait = "0.1" to [dependencies]. Bumped
+version from 0.1.0 to 0.11.0. Existing reqwest features already cover embed
+HTTP calls. No new dev-deps.
+
+Files Changed:
+- Cargo.toml (bump version, add thiserror + async-trait)
+- Cargo.lock (regenerated via cargo build)
+
+Key Decisions:
+- thiserror 1.x chosen per spec (crate graph already pulls 2.x for transitive deps; both coexist)
+- No wiremock or other dev-deps added
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Refactor main.rs into module layout with no behavior change
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Mechanical split of src/main.rs into REQ-NF-001 module layout. parse_param_value
+and parse_params moved verbatim to src/params.rs. Created stub files for
+embed/{mod,openai,ollama}.rs and commands/{mod,embed}.rs for later tasks. No
+behavior change; all existing tests pass verbatim.
+
+Files Changed:
+- src/main.rs (modified — mod decls + params import; removed param fn bodies)
+- src/params.rs (created — parse_param_value, parse_params)
+- src/embed/mod.rs (created — stub, declares openai + ollama submodules)
+- src/embed/openai.rs (created — stub)
+- src/embed/ollama.rs (created — stub)
+- src/commands/mod.rs (created — stub, declares embed submodule)
+- src/commands/embed.rs (created — stub)
+
+Key Decisions:
+- Stub modules use #[allow(dead_code)] + pub mod so later tasks can drop in
+  code without churn on main.rs.
+- parse_param_value re-exported indirectly via parse_params; kept pub in
+  params.rs for task-003 extension.
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Implement ParamSpec enum and parse_param with :modifier support
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added ParamSpec { Literal(Value), Embed(String) } and parse_param(&str) in
+src/params.rs. Key-side split_once(':') isolates the modifier; value-side is
+left untouched so values with ':' or '=' round-trip unchanged. Literals reuse
+parse_param_value for type coercion. Unknown modifiers produce the exact
+REQ-F-011 error "unknown param modifier: :<name>". Both new items are
+#[allow(dead_code)] until wired in by task-007/task-008.
+
+Files Changed:
+- src/params.rs (added ParamSpec enum + parse_param fn)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Used split_once on key_part (not raw) so only KEY-side ':' splits; URLs in
+  values like http://x are untouched.
+- Literal arm calls parse_param_value verbatim — preserves all existing
+  coercion semantics.
+- #[allow(dead_code)] matches the stub-module convention set in task-002.
+
+Next Task: task-004
+
+================================================================================
+TASK-004: Implement EmbedProvider trait, EmbedError, EmbedCliArgs, EmbedConfig
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Filled out src/embed/mod.rs with async EmbedProvider trait (Send+Sync via
+async-trait), EmbedError enum (thiserror) with MissingApiKey / NotConfigured
+/ ModelNotSet / UnknownProvider / Http / ProviderError, EmbedCliArgs (clap
+Args with NEO4J_EMBED_* env bindings), EmbedConfig with from_sources /
+require / build, and resolve_api_key helper (OPENAI_API_KEY → NEO4J_EMBED_API_KEY
+fallback for openai; None for ollama). build() stubs out provider wiring for
+tasks 5/6. All #[allow(dead_code)] until query mode + subcommand wire-in.
+
+Files Changed:
+- src/embed/mod.rs (trait, errors, clap args, config)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Added dedicated ModelNotSet variant so REQ-F-011 error "NEO4J_EMBED_MODEL
+  not set" matches exactly; wrapping it in ProviderError would have prefixed
+  "embed error:" and broken the exact-match tests planned for task-009.
+- EmbedCliArgs derives Default so query mode can construct a no-op value when
+  not embedding, avoiding Option<EmbedCliArgs> plumbing later.
+- resolve_api_key filters empty strings to treat `OPENAI_API_KEY=` identically
+  to unset — matches user expectation for .env placeholders.
+- build() returns ProviderError stubs for openai/ollama today; tasks 5/6
+  replace these bodies with real providers without changing callers.
+
+Next Task: task-005
+
+================================================================================
+TASK-005: Implement OpenAI embedding provider
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Implemented OpenAi provider in src/embed/openai.rs. POSTs to
+{base_url}/embeddings with bearer auth and body {input, model, dimensions?}.
+Default base URL https://api.openai.com/v1. new() rejects missing/empty
+api_key with MissingApiKey {openai, OPENAI_API_KEY}. Non-2xx -> ProviderError
+"HTTP <status>: <body>". Empty data[] -> ProviderError("empty response").
+Wired into EmbedConfig::build() replacing the openai stub; ollama stub still
+in place for task-006.
+
+Files Changed:
+- src/embed/openai.rs (real impl)
+- src/embed/mod.rs (build() wires OpenAi)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Kept serde Deserialize types private to file; only `embedding: Vec<f32>` is
+  extracted (other OpenAI fields like `object`, `usage` are ignored).
+- trim_end_matches('/') on base_url so `--embed-base-url
+  https://api.openai.com/v1/` doesn't double-slash.
+- Filter empty api_key/base_url the same way resolve_api_key does to keep
+  `.env` placeholder behaviour consistent.
+- dimensions only added to JSON body when Some; OpenAI errors if `null` sent.
+
+Next Task: task-006
+
+================================================================================
+TASK-006: Implement Ollama embedding provider
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Implemented Ollama provider in src/embed/ollama.rs. POSTs to
+{base_url}/api/embed (plural) with body {model, input}. Default base URL
+http://localhost:11434. No Authorization header ever sent. Connection/
+request/timeout errors map to ProviderError "ollama unreachable at <url>
+(<cause>). is `ollama serve` running?". HTTP 404 maps to "model '<m>' not
+found. run: ollama pull <m>". Other non-2xx -> "HTTP <status>: <body>".
+Empty embeddings array -> "empty response". Wired into EmbedConfig::build()
+replacing the ollama stub.
+
+Files Changed:
+- src/embed/ollama.rs (real impl)
+- src/embed/mod.rs (build() wires Ollama)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Bucketed is_connect/is_request/is_timeout into the "unreachable" message
+  rather than just is_connect — reqwest classifies pre-response failures
+  differently across platforms, and all three cases share the same user
+  remedy (start ollama serve).
+- Treated 404 specifically (before the generic non-2xx path) so the
+  actionable "ollama pull <model>" hint fires even when the body is empty.
+- Kept dimensions field plumbed through Ollama::new for trait symmetry even
+  though Ollama ignores it — matches REQ-F-010 (dimensions are OpenAI-only).
+
+Next Task: task-007
+
+================================================================================
+TASK-007: Implement `embed` subcommand with json and raw output formats
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Filled out src/commands/embed.rs with EmbedCmd (clap Args) — optional TEXT
+positional, --format json|raw (default json), flattened EmbedCliArgs. EmbedFormat
+value-enum excludes toon so clap rejects it at parse time. run() resolves text
+(positional > stdin, trimmed, empty rejected), calls EmbedConfig::require for
+NotConfigured surfacing, builds provider, embeds, prints. Wired into Commands
+enum in main.rs. Removed #[allow(dead_code)] from commands/mod.rs now that the
+module is live.
+
+Files Changed:
+- src/commands/embed.rs (real impl: EmbedFormat, EmbedCmd, resolve_text, run)
+- src/commands/mod.rs (drop #[allow(dead_code)])
+- src/main.rs (add Commands::Embed variant + dispatch, import EmbedCmd)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Used EmbedConfig::require (not from_sources + match) in the subcommand path:
+  the user explicitly asked to embed, so "no provider" is always an error here,
+  and require is the one-liner that produces the exact REQ-F-011 string.
+- resolve_text trims both positional and stdin, and rejects empty-after-trim,
+  so providers never see a blank body (OpenAI 400s on empty input anyway).
+- Leaning on clap's ValueEnum for format rejection (toon) rather than hand-
+  parsing — the error message clap emits ("invalid value 'toon' for --format:
+  [possible values: json, raw]") is already clear.
+- println! for raw output uses default f32 Display; matches what `wc -l` will
+  count in the task-011 integration test.
+
+Next Task: task-008
+
+================================================================================
+TASK-008: Wire :embed resolution into query mode with lazy provider init
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+QueryArgs now #[command(flatten)]s EmbedCliArgs. Added resolve_params(specs,
+embed_args) in main.rs: lazily instantiates the provider only when any
+ParamSpec::Embed is present, then awaits embed(text) for each and inserts
+json!(vec) into the Neo4j params Map. parse_params was removed from params.rs
+in favour of parse_param_specs; ParamSpec/parse_param/resolve_api_key/etc
+lost their #[allow(dead_code)] markers now that the code path is live.
+parse_params in the test helpers stays (tests re-implement it locally).
+
+Files Changed:
+- src/main.rs (QueryArgs flattens EmbedCliArgs; resolve_params; run_query_mode
+  swaps parse_params -> parse_param_specs + resolve_params)
+- src/params.rs (drop parse_params; add parse_param_specs; drop dead_code
+  attrs on ParamSpec/parse_param)
+- src/embed/mod.rs (drop dead_code attrs; keep on model/dimensions trait
+  methods since still unused at callsites)
+- src/embed/openai.rs, src/embed/ollama.rs (drop top-level dead_code attrs)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Lazy provider init via `if has_embed` instead of resolving eagerly: no env
+  var cost for the overwhelmingly common literal-only query-mode path.
+- `provider.as_ref().expect(...)` in the hot loop is safe by construction:
+  provider is Some iff any Embed spec exists, and the expect only fires on
+  Embed specs — no panic path reachable from user input.
+- Kept parse_param_value exported (used by parse_param via params.rs) but
+  removed parse_params entirely. Tests re-implement it locally per existing
+  unit.rs convention, so no test churn needed.
+- json!(vector) serializes Vec<f32> directly to a JSON array of numbers that
+  Neo4j accepts as a LIST<FLOAT> parameter for db.index.vector.queryNodes.
+- Sequential embed calls (one await per :embed spec) rather than join_all:
+  keeps error ordering deterministic and v1 doesn't need the throughput.
+
+Next Task: task-009
+
+================================================================================
+TASK-009: Unit tests for param parser and embed config resolution
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added 27 new unit tests to tests/unit.rs. Re-implemented parse_param /
+ParamSpec / EmbedError (Display impl) / from_sources / resolve_api_key
+locally per the file's existing re-implementation convention. Covers
+parse_param literal/embed/unknown-modifier/value-with-equals/value-with-
+url-colon/empty-value cases; asserts all four REQ-F-011 error strings
+verbatim via format!("{err}") equality; exercises from_sources None/
+ModelNotSet/precedence paths; proves OPENAI_API_KEY > NEO4J_EMBED_API_KEY
+fallback for openai and that ollama always ignores both keys. 71 unit
+tests pass (was 44). cargo clippy + cargo fmt clean.
+
+Files Changed:
+- tests/unit.rs (+27 tests, +file-level allow(clippy::approx_constant))
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Re-implemented logic locally (no src/lib.rs) matching the existing
+  truncate_arrays / parse_params pattern — zero test-only production
+  surface area.
+- resolve_api_key tests take a `&dyn Fn(&str) -> Option<String>` env
+  closure instead of touching process env: avoids the `std::env::set_var`
+  parallelism hazard and makes each test an isolated pure-function call.
+- Precedence test encodes the clap merge contract (CLI value already
+  wins by the time it reaches from_sources) rather than invoking clap
+  itself; the actual flag-vs-env precedence lives in clap and the PRD
+  treats it as out-of-scope for the unit layer.
+- File-level #![allow(clippy::approx_constant)] added because pre-
+  existing 3.14 literals (from prior tasks' verbatim tests) trip
+  rust 1.94's deny-by-default approx_constant; acceptance criteria
+  forbids touching those tests, so a scoped allow on the test file is
+  the only clean path.
+
+Next Task: task-010
+
+================================================================================
+TASK-010: Add Ollama service to docker-compose and CI workflow
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added pinned ollama/ollama:0.5.4 service to tests/docker-compose.yml and
+.github/workflows/ci.yml. New CI step "Pull all-minilm into Ollama" runs
+`docker exec ${{ job.services.ollama.id }} ollama pull all-minilm` before
+the integration test step. Added tests/pull-ollama-models.sh for local
+dev parity. No actions/cache used for the Ollama volume in v1.
+
+Files Changed:
+- tests/docker-compose.yml (+ollama service, pinned 0.5.4, healthcheck)
+- tests/pull-ollama-models.sh (new, +x, docker exec pull script)
+- .github/workflows/ci.yml (+ollama service + pull step)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Pinned ollama/ollama:0.5.4 rather than :latest for CI reproducibility.
+- Kept GH Actions `services:` block (parallel to neo4j) instead of
+  switching to docker-compose in CI — minimal churn to existing workflow.
+- `${{ job.services.ollama.id }}` resolves to the service container id so
+  `docker exec` hits the correct container without name-scheme guessing.
+- Healthcheck uses `ollama list` (cheap, no network, returns non-zero when
+  daemon not ready) rather than hitting the HTTP port directly.
+- Local helper script defaults CONTAINER=tests-ollama-1 (compose default
+  project name = parent dir `tests`) with OLLAMA_CONTAINER override.
+
+Next Task: task-011
+
+================================================================================
+TASK-011: Integration tests against real Ollama
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added ollama_available() helper (mirrors neo4j_available()) plus two builder
+helpers embed_cmd() and cmd_with_embed() that set NEO4J_EMBED_PROVIDER=ollama,
+NEO4J_EMBED_MODEL=all-minilm, NEO4J_EMBED_BASE_URL (overridable via
+OLLAMA_TEST_URL). Added 5 #[ignore] integration tests: embed subcommand JSON
+output, stdin input, raw-format 384-line count, -P v:embed=... round-trip
+through Neo4j (asserts size($v)=384), and mixed literal+embed params
+preserving integer type on the literal side. Verified locally by bringing up
+docker-compose stack + ollama pull all-minilm + cargo test --ignored embed:
+5 passed.
+
+Files Changed:
+- tests/integration.rs (+ollama_available + embed_cmd + cmd_with_embed + 5 tests)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- OLLAMA_TEST_URL env override mirrors NEO4J_TEST_URI convention — lets CI
+  point at a different host if the service port isn't localhost.
+- ALL_MINILM_DIMS = 384 kept as a single named constant so the dimension
+  assertion is explicit and shared across all 5 tests.
+- Round-trip test uses `RETURN size($v) AS n` rather than returning the
+  vector itself: Neo4j's HTTP response would dump 384 floats into stdout,
+  making assertion brittle on float formatting. size() proves the vector
+  made it through intact and is the shape the user actually cares about.
+- is_i64() assertion in the mixed-params test is the real teeth of the
+  "literal types preserved" acceptance criterion — a string "42" would
+  also equal 42 under serde_json's loose comparison, so the type check
+  is what distinguishes literal-path behaviour from a regression.
+- Skip messages printed via eprintln! when ollama/neo4j unavailable so
+  `cargo test -- --ignored` in an incomplete env degrades gracefully
+  instead of misleadingly failing.
+
+Next Task: task-012
+
+================================================================================
+TASK-012: Integration tests for error paths without Ollama
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added 4 non-#[ignore] integration tests in tests/integration.rs asserting the
+exact REQ-F-011 error strings for the four config/parse failure modes: missing
+provider with :embed, unknown param modifier, OpenAI without API key, unknown
+provider name. Added embed_env_clean() helper that strips NEO4J_EMBED_* and
+OPENAI_API_KEY from the child env so a dev shell with those already exported
+can't mask the failure under test. All 4 tests run as part of default cargo
+test (24 passing, was 20). Clippy + fmt clean.
+
+Files Changed:
+- tests/integration.rs (+embed_env_clean + 4 tests)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Query-mode path used for missing-provider + unknown-modifier tests because
+  those errors happen in parse_param_specs / resolve_params (post password
+  check). Supplied NEO4J_PASSWORD=x + dead port so the code reaches the
+  assertion point without needing a live DB.
+- Embed-subcommand path used for missing-API-key + unknown-provider tests —
+  no password requirement, shorter and more focused on the embed failure.
+- predicate::str::contains matches the existing stderr assertion style
+  (see wrong_password / missing_password_errors). The exact REQ-F-011
+  substring is present in the binary's "error: <msg>" line.
+- embed_env_clean strips even OPENAI_API_KEY so the openai-missing-key test
+  doesn't accidentally pass a real key from the dev's shell into the child.
+
+Next Task: task-013
+
+================================================================================
+TASK-013: Update README.md with Embeddings section and config table
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added Embeddings section to README covering :embed modifier, embed subcommand,
+and setup recipes for Ollama (local) and OpenAI (hosted). Included motivating
+db.index.vector.queryNodes example. Extended Configuration table with 6 new
+rows: NEO4J_EMBED_PROVIDER, NEO4J_EMBED_MODEL, NEO4J_EMBED_DIMENSIONS,
+NEO4J_EMBED_BASE_URL, OPENAI_API_KEY, NEO4J_EMBED_API_KEY.
+
+Files Changed:
+- README.md (+Embeddings section, +6 config table rows, +opt-in note)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Used \$q (escaped) inside shell example code blocks so copy-paste works from
+  a POSIX shell without premature variable expansion.
+- Kept the two vector-search examples minimal: first shows pure :embed, second
+  shows mixed literal+embed (k=5) to reinforce REQ-F-002 type-coercion
+  preservation without duplicating the full round-trip integration test.
+- Documented the opt-in behaviour twice (section intro + below config table)
+  because users skim either one depending on entry point.
+- Chose all-minilm in the Ollama recipe to match the CI pin from task-010 —
+  one command line that actually works end-to-end today.
+
+Next Task: task-014
+
+================================================================================
+TASK-014: Update both SKILL.md copies in sync
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added "Vector search / embeddings" section to both skills/neo4j-query/SKILL.md
+and .claude/skills/neo4j-query/SKILL.md. Covers opt-in provider requirement,
+-P name:embed=... syntax, mixed literal+embed params, Ollama quickstart, and
+the embed subcommand. Files verified byte-identical via diff. cargo build
+clean (include_str! on SKILL.md recompiles the binary).
+
+Files Changed:
+- skills/neo4j-query/SKILL.md (+embeddings section)
+- .claude/skills/neo4j-query/SKILL.md (+embeddings section, byte-identical)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Placed new section between "When given a user argument" and "Tips" so the
+  opt-in feature doesn't interrupt the core query/schema flow new users read
+  top-down.
+- Kept the Ollama example one-liner (export + single query) instead of the
+  README's full .env recipe — SKILL.md targets an in-session agent that
+  already has env wired.
+- Used `RETURN size($q) AS dims` in the Ollama example (same pattern as
+  task-011 integration tests) — proves the vector round-trips without
+  dumping 384 floats into the agent's context.
+
+Next Task: task-015
+
+================================================================================
+TASK-015: Add `embed` subcommand row to README Subcommands table
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added `embed [TEXT]` row to README Subcommands table between `schema` and
+`skill install` rows. Describes stdin fallback and `--format json|raw`.
+No code changes; docs-only. cargo build + fmt + clippy clean.
+
+Files Changed:
+- README.md (+1 row in Subcommands table)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Placed row right after `schema` so the two primary non-skill subcommands
+  sit together before the skill management rows.
+- Column padding matches the `schema` row (21-char command column) rather
+  than the wider `skill install/remove` rows; Markdown renders either way
+  but the tighter padding reads cleaner next to `schema`.
+
+Next Task: none (feature complete)
