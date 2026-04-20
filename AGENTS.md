@@ -19,6 +19,7 @@ This is a single repo (`oskarhane/homebrew-neo4j-query`) that serves as both the
 - `tests/unit.rs` re-implements private functions locally rather than importing from the crate (no `src/lib.rs`). When testing `src/*` logic, copy the function verbatim into `tests/unit.rs` and call it — matches the pattern used for `parse_param_value`, `parse_params`, `truncate_arrays`, `parse_param`, `EmbedError`, `resolve_api_key`.
 - Avoid `3.14` in tests — rust 1.94 `clippy::approx_constant` denies it. Use `2.5` or another non-PI float, or add `#![allow(clippy::approx_constant)]` at the top of the test file.
 - `serde_json` `preserve_order` is enabled transitively via `toon-format` — JSON object key order IS preserved in TOON output. Build output `Map`s via explicit `insert` in the order you want emitted; don't rely on alphabetical sorting.
+- **Neo4j version-dependent queries**: verify behavior on BOTH `neo4j:5` and `neo4j:2025` containers. Silent-fallback bugs (wrong setting name, wrong value shape) often look correct on one version and wrong on the other. Default-Cypher setting is `db.query.default_language` (not `..._version`); value is `CYPHER_5` / `CYPHER_25` (strip `CYPHER_` prefix). Override at container start via `-e NEO4J_db_query_default__language=CYPHER_25` (double underscore escapes a literal underscore in env-var form).
 
 ## CLI Architecture
 

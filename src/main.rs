@@ -518,14 +518,15 @@ async fn run_schema(
         }
     }
 
-    // SHOW SETTINGS — defaultCypherVersion. Fall back to "5" on error or zero rows.
+    // SHOW SETTINGS — defaultCypherVersion. Setting is `db.query.default_language`,
+    // value is `CYPHER_5` / `CYPHER_25`; strip the prefix. Absent on Neo4j 5.x → "5".
     let default_cypher_version = match run_cypher(
         client,
         url,
         user,
         password,
         "SHOW SETTINGS YIELD name, value \
-         WHERE name = 'db.query.default_language_version' \
+         WHERE name = 'db.query.default_language' \
          RETURN value",
     )
     .await
@@ -537,6 +538,11 @@ async fn run_schema(
                 Value::String(s) if !s.is_empty() => Some(s.clone()),
                 Value::Number(n) => Some(n.to_string()),
                 _ => None,
+            })
+            .map(|raw| {
+                raw.strip_prefix("CYPHER_")
+                    .map(|n| n.to_string())
+                    .unwrap_or(raw)
             })
             .unwrap_or_else(|| "5".to_string()),
         Err(_) => "5".to_string(),
