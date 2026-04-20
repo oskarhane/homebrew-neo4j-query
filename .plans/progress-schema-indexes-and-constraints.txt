@@ -42,3 +42,32 @@ Key Decisions:
 - Same sort-by-name-asc pattern as indexes
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Update schema_command integration test to cover indexes & constraints
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended schema_command #[ignore] test in tests/integration.rs. Seeds
+schema_test_unique uniqueness constraint + schema_test_z_idx range index
+before invoking `schema`, adds stdout substring assertions for indexes,
+constraints, schema_test_unique, schema_test_z_idx, RANGE, UNIQUE.
+Cleanup drops constraint and index via IF EXISTS before the existing
+node DETACH DELETEs. Test remains #[ignore]-gated.
+
+Files Changed:
+- tests/integration.rs (modified: seed/assert/cleanup for idx+constraint)
+
+Key Decisions:
+- "UNIQUE" substring hits constraint type "UNIQUENESS" returned by Neo4j
+- Drops run before node deletes to avoid constraint interference
+
+Feedback Loops:
+- cargo build: ok
+- cargo test (non-ignored): 75 passed
+- cargo clippy: clean
+- cargo fmt --check: clean
+- cargo test -- --ignored schema_command: SKIPPED (local Neo4j on :7474 unreachable)
+
+Next Task: task-004

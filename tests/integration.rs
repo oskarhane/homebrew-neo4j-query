@@ -317,16 +317,40 @@ fn schema_command() {
         .assert()
         .success();
 
+    // seed constraint + index
+    cmd()
+        .arg("CREATE CONSTRAINT schema_test_unique IF NOT EXISTS FOR (n:SchemaTest) REQUIRE n.x IS UNIQUE")
+        .assert()
+        .success();
+    cmd()
+        .arg("CREATE INDEX schema_test_z_idx IF NOT EXISTS FOR (n:SchemaTarget) ON (n.z)")
+        .assert()
+        .success();
+
     cmd().arg("schema").assert().success().stdout(
         predicate::str::contains("SchemaTest")
             .and(predicate::str::contains("SchemaTarget"))
             .and(predicate::str::contains("SCHEMA_REL"))
             .and(predicate::str::contains("nodes"))
             .and(predicate::str::contains("relationships"))
-            .and(predicate::str::contains("properties")),
+            .and(predicate::str::contains("properties"))
+            .and(predicate::str::contains("indexes"))
+            .and(predicate::str::contains("constraints"))
+            .and(predicate::str::contains("schema_test_unique"))
+            .and(predicate::str::contains("schema_test_z_idx"))
+            .and(predicate::str::contains("RANGE"))
+            .and(predicate::str::contains("UNIQUE")),
     );
 
     // cleanup
+    cmd()
+        .arg("DROP CONSTRAINT schema_test_unique IF EXISTS")
+        .assert()
+        .success();
+    cmd()
+        .arg("DROP INDEX schema_test_z_idx IF EXISTS")
+        .assert()
+        .success();
     cmd()
         .arg("MATCH (n:SchemaTest) DETACH DELETE n")
         .assert()

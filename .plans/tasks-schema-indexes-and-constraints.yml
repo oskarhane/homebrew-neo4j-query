@@ -38,7 +38,7 @@ tasks:
     title: "Update schema_command integration test to cover indexes & constraints"
     description: |
       Update `schema_command` in tests/integration.rs (lines 308-338). Before invoking `schema`, seed a uniqueness constraint and a range index: `CREATE CONSTRAINT schema_test_unique IF NOT EXISTS FOR (n:SchemaTest) REQUIRE n.x IS UNIQUE` and `CREATE INDEX schema_test_z_idx IF NOT EXISTS FOR (n:SchemaTarget) ON (n.z)`. Extend the stdout assertions to require substrings: `indexes`, `constraints`, `schema_test_unique`, `schema_test_z_idx`, `RANGE`, and a uniqueness marker (`UNIQUE`). Extend cleanup to `DROP CONSTRAINT schema_test_unique IF EXISTS` and `DROP INDEX schema_test_z_idx IF EXISTS` before the existing node deletes. Test stays `#[ignore]` and uses the existing `cmd()` helper — no new infra.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -47,7 +47,7 @@ tasks:
       - "Cleanup drops both the constraint and the index via IF EXISTS before node deletes"
       - "Test remains #[ignore]-gated and live-Neo4j only"
       - "cargo test -- --ignored schema_command passes against a local Neo4j 5.x"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-004
     title: "Document indexes & constraints in README and SKILL.md copies"
