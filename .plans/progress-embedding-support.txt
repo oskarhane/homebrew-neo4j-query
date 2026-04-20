@@ -444,4 +444,28 @@ Key Decisions:
   task-011 integration tests) — proves the vector round-trips without
   dumping 384 floats into the agent's context.
 
+Next Task: task-015
+
+================================================================================
+TASK-015: Add `embed` subcommand row to README Subcommands table
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added `embed [TEXT]` row to README Subcommands table between `schema` and
+`skill install` rows. Describes stdin fallback and `--format json|raw`.
+No code changes; docs-only. cargo build + fmt + clippy clean.
+
+Files Changed:
+- README.md (+1 row in Subcommands table)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Placed row right after `schema` so the two primary non-skill subcommands
+  sit together before the skill management rows.
+- Column padding matches the `schema` row (21-char command column) rather
+  than the wider `skill install/remove` rows; Markdown renders either way
+  but the tighter padding reads cleaner next to `schema`.
+
 Next Task: none (feature complete)

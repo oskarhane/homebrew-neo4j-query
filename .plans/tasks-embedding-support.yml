@@ -302,7 +302,7 @@ tasks:
       subcommand. Add a row describing `embed [TEXT]` with a short
       description mentioning stdin fallback and `--format json|raw`.
       Keep the existing table formatting consistent.
-    status: pending
+    status: completed
     dependencies:
       - task-007
       - task-013
@@ -311,4 +311,4 @@ tasks:
       - "Row mentions stdin fallback and --format json|raw"
       - "Existing rows (schema, skill install/remove/list) unchanged"
       - "Markdown table renders cleanly"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
