@@ -4,9 +4,7 @@
 // `EmbedConfig` factory. Concrete providers live in sibling submodules
 // (`openai`, `ollama`) and are wired up in later tasks.
 
-#[allow(dead_code)]
 pub mod ollama;
-#[allow(dead_code)]
 pub mod openai;
 
 use async_trait::async_trait;
@@ -17,17 +15,18 @@ use thiserror::Error;
 ///
 /// Implementors must be `Send + Sync` so they can be used behind a
 /// `Box<dyn EmbedProvider>` across await points in the tokio runtime.
-#[allow(dead_code)]
 #[async_trait]
 pub trait EmbedProvider: Send + Sync {
     /// Embed a single input string into a vector of floats.
     async fn embed(&self, input: &str) -> Result<Vec<f32>, EmbedError>;
 
     /// Name of the model in use (e.g. `"text-embedding-3-small"`).
+    #[allow(dead_code)]
     fn model(&self) -> &str;
 
     /// Optional explicit output dimensions. `None` means the provider's
     /// default for the configured model.
+    #[allow(dead_code)]
     fn dimensions(&self) -> Option<u32>;
 }
 
@@ -36,7 +35,6 @@ pub trait EmbedProvider: Send + Sync {
 /// Messages intentionally match REQ-F-011 exactly; downstream code asserts
 /// on `format!("{err}")` so do not change these strings without updating
 /// tests and docs.
-#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum EmbedError {
     #[error("missing API key for {provider}: set {env_var}")]
@@ -71,7 +69,6 @@ pub enum EmbedError {
 /// `NEO4J_EMBED_*` environment variable via clap's `env` attribute, so
 /// precedence is CLI flag > shell env > `.env` (loaded by `load_env()`
 /// before clap parses).
-#[allow(dead_code)]
 #[derive(Args, Debug, Clone, Default)]
 pub struct EmbedCliArgs {
     /// Embedding provider name (`openai` or `ollama`).
@@ -92,7 +89,6 @@ pub struct EmbedCliArgs {
 }
 
 /// Resolved embed configuration, ready to hand to a provider factory.
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct EmbedConfig {
     pub provider: String,
@@ -112,7 +108,6 @@ impl EmbedConfig {
     /// set but required fields (model) are missing, so config errors
     /// surface eagerly rather than as a generic "model not set" at
     /// request time.
-    #[allow(dead_code)]
     pub fn from_sources(args: &EmbedCliArgs) -> Result<Option<Self>, EmbedError> {
         let provider = match args.provider.as_deref() {
             Some(p) if !p.is_empty() => p.to_string(),
@@ -140,7 +135,6 @@ impl EmbedConfig {
     /// Same as `from_sources` but treats missing provider as an error.
     /// Call this from paths that NEED a provider (e.g. `:embed` param
     /// resolution, `embed` subcommand execution).
-    #[allow(dead_code)]
     pub fn require(args: &EmbedCliArgs) -> Result<Self, EmbedError> {
         Self::from_sources(args)?.ok_or(EmbedError::NotConfigured)
     }
@@ -149,7 +143,6 @@ impl EmbedConfig {
     /// implemented in task-005 (`openai`) and task-006 (`ollama`); this
     /// function currently errors for any provider name other than a
     /// stubbed match so callers can be wired up before providers exist.
-    #[allow(dead_code)]
     pub fn build(self) -> Result<Box<dyn EmbedProvider>, EmbedError> {
         match self.provider.as_str() {
             "openai" => {
@@ -172,7 +165,6 @@ impl EmbedConfig {
 /// - `ollama`: always `None`; `NEO4J_EMBED_API_KEY` is silently ignored
 ///   per REQ-F-006.
 /// - anything else: `NEO4J_EMBED_API_KEY` if present.
-#[allow(dead_code)]
 pub fn resolve_api_key(provider: &str) -> Option<String> {
     match provider {
         "openai" => std::env::var("OPENAI_API_KEY")

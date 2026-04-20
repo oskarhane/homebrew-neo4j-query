@@ -156,7 +156,7 @@ tasks:
       `ParamSpec`s, initialising the embed provider only when at least one
       `ParamSpec::Embed` exists. Replace the `parse_params(&qa.p)?` call in
       `run_query_mode` with the new path. Keep retry logic unchanged.
-    status: pending
+    status: completed
     dependencies:
       - task-003
       - task-005
@@ -167,7 +167,7 @@ tasks:
       - "No embed provider instantiated when no :embed params are present"
       - "NotConfigured error fires when :embed used without NEO4J_EMBED_PROVIDER"
       - "Query retry behavior unchanged for non-embed paths"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-009
     title: "Unit tests for param parser and embed config resolution"

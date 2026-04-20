@@ -198,3 +198,43 @@ Key Decisions:
   count in the task-011 integration test.
 
 Next Task: task-008
+
+================================================================================
+TASK-008: Wire :embed resolution into query mode with lazy provider init
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+QueryArgs now #[command(flatten)]s EmbedCliArgs. Added resolve_params(specs,
+embed_args) in main.rs: lazily instantiates the provider only when any
+ParamSpec::Embed is present, then awaits embed(text) for each and inserts
+json!(vec) into the Neo4j params Map. parse_params was removed from params.rs
+in favour of parse_param_specs; ParamSpec/parse_param/resolve_api_key/etc
+lost their #[allow(dead_code)] markers now that the code path is live.
+parse_params in the test helpers stays (tests re-implement it locally).
+
+Files Changed:
+- src/main.rs (QueryArgs flattens EmbedCliArgs; resolve_params; run_query_mode
+  swaps parse_params -> parse_param_specs + resolve_params)
+- src/params.rs (drop parse_params; add parse_param_specs; drop dead_code
+  attrs on ParamSpec/parse_param)
+- src/embed/mod.rs (drop dead_code attrs; keep on model/dimensions trait
+  methods since still unused at callsites)
+- src/embed/openai.rs, src/embed/ollama.rs (drop top-level dead_code attrs)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Lazy provider init via `if has_embed` instead of resolving eagerly: no env
+  var cost for the overwhelmingly common literal-only query-mode path.
+- `provider.as_ref().expect(...)` in the hot loop is safe by construction:
+  provider is Some iff any Embed spec exists, and the expect only fires on
+  Embed specs — no panic path reachable from user input.
+- Kept parse_param_value exported (used by parse_param via params.rs) but
+  removed parse_params entirely. Tests re-implement it locally per existing
+  unit.rs convention, so no test churn needed.
+- json!(vector) serializes Vec<f32> directly to a JSON array of numbers that
+  Neo4j accepts as a LIST<FLOAT> parameter for db.index.vector.queryNodes.
+- Sequential embed calls (one await per :embed spec) rather than join_all:
+  keeps error ordering deterministic and v1 doesn't need the throughput.
+
+Next Task: task-009

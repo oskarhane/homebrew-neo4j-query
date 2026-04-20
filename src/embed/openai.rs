@@ -16,7 +16,6 @@ use super::{EmbedError, EmbedProvider};
 
 const DEFAULT_BASE_URL: &str = "https://api.openai.com/v1";
 
-#[allow(dead_code)]
 pub struct OpenAi {
     client: Client,
     base_url: String,
@@ -41,7 +40,6 @@ impl OpenAi {
     /// `api_key == None` -> MissingApiKey error (caller should have resolved
     /// `OPENAI_API_KEY` / `NEO4J_EMBED_API_KEY` via `resolve_api_key`).
     /// `base_url == None` -> `https://api.openai.com/v1`.
-    #[allow(dead_code)]
     pub fn new(
         api_key: Option<String>,
         model: String,

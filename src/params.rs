@@ -1,13 +1,11 @@
-use serde_json::{Map, Value};
+use serde_json::Value;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParamSpec {
     Literal(Value),
     Embed(String),
 }
 
-#[allow(dead_code)]
 pub fn parse_param(raw: &str) -> Result<(String, ParamSpec), String> {
     let (key_part, value) = raw
         .split_once('=')
@@ -46,13 +44,11 @@ pub fn parse_param_value(v: &str) -> Value {
     Value::String(v.to_string())
 }
 
-pub fn parse_params(pairs: &[String]) -> Result<Map<String, Value>, String> {
-    let mut map = Map::new();
-    for pair in pairs {
-        let (k, v) = pair
-            .split_once('=')
-            .ok_or_else(|| format!("invalid param format '{pair}', expected key=value"))?;
-        map.insert(k.to_string(), parse_param_value(v));
-    }
-    Ok(map)
+/// Parse a list of `-P key=value` pairs into `(name, ParamSpec)` tuples.
+///
+/// Preserves order so error messages point at the first offender and callers
+/// that care about insertion order (e.g. lazy provider init that only fires
+/// on the first `:embed`) behave deterministically.
+pub fn parse_param_specs(pairs: &[String]) -> Result<Vec<(String, ParamSpec)>, String> {
+    pairs.iter().map(|p| parse_param(p)).collect()
 }

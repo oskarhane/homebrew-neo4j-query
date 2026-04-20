@@ -5,7 +5,8 @@ mod skill;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use commands::embed::EmbedCmd;
-use params::parse_params;
+use embed::{EmbedCliArgs, EmbedConfig};
+use params::{parse_param_specs, ParamSpec};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
@@ -75,8 +76,9 @@ struct QueryArgs {
     #[command(flatten)]
     conn: ConnectionArgs,
 
-    /// Query parameters as key=value pairs
-    #[arg(short = 'P', value_name = "KEY=VALUE")]
+    /// Query parameters as key=value pairs. Append `:embed` to the key to
+    /// replace the value with an embedding vector, e.g. `-P v:embed='hello'`.
+    #[arg(short = 'P', value_name = "KEY[:MOD]=VALUE")]
     p: Vec<String>,
 
     /// Output format
@@ -87,6 +89,9 @@ struct QueryArgs {
     /// TOON shows "[array truncated: N items]", JSON uses [].
     #[arg(long, default_value = "100")]
     truncate_arrays_over: usize,
+
+    #[command(flatten)]
+    embed_args: EmbedCliArgs,
 }
 
 #[derive(Subcommand)]
@@ -461,6 +466,45 @@ fn load_env() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Resolve `-P` specs into a Neo4j parameter map.
+///
+/// Literal specs pass through verbatim (type-coerced at parse time). `:embed`
+/// specs are resolved by calling the configured provider once per spec. The
+/// provider is instantiated lazily — if no spec uses `:embed` we skip
+/// `EmbedConfig::require` entirely, so query mode still works with no embed
+/// env vars set.
+async fn resolve_params(
+    specs: Vec<(String, ParamSpec)>,
+    embed_args: &EmbedCliArgs,
+) -> Result<Map<String, Value>, Box<dyn std::error::Error>> {
+    let has_embed = specs.iter().any(|(_, s)| matches!(s, ParamSpec::Embed(_)));
+
+    let provider = if has_embed {
+        let config = EmbedConfig::require(embed_args)?;
+        Some(config.build()?)
+    } else {
+        None
+    };
+
+    let mut map = Map::new();
+    for (name, spec) in specs {
+        match spec {
+            ParamSpec::Literal(v) => {
+                map.insert(name, v);
+            }
+            ParamSpec::Embed(text) => {
+                let vector = provider
+                    .as_ref()
+                    .expect("provider initialised when any :embed spec present")
+                    .embed(&text)
+                    .await?;
+                map.insert(name, json!(vector));
+            }
+        }
+    }
+    Ok(map)
+}
+
 async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>> {
     let input = resolve_query(qa.query)?;
     let password = qa.conn.require_password()?;
@@ -472,7 +516,8 @@ async fn run_query_mode(qa: QueryArgs) -> Result<(), Box<dyn std::error::Error>>
     );
 
     let client = reqwest::Client::new();
-    let params = parse_params(&qa.p)?;
+    let specs = parse_param_specs(&qa.p)?;
+    let params = resolve_params(specs, &qa.embed_args).await?;
 
     let mut body = Map::new();
     body.insert("statement".into(), Value::String(input));

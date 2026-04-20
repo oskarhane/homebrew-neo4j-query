@@ -24,11 +24,12 @@ use super::{EmbedError, EmbedProvider};
 
 const DEFAULT_BASE_URL: &str = "http://localhost:11434";
 
-#[allow(dead_code)]
 pub struct Ollama {
     client: Client,
     base_url: String,
     model: String,
+    // Kept for trait symmetry even though Ollama ignores it (REQ-F-010).
+    #[allow(dead_code)]
     dimensions: Option<u32>,
 }
 
@@ -42,7 +43,6 @@ impl Ollama {
     ///
     /// No API key is accepted or required. `base_url == None` falls back to
     /// `http://localhost:11434`.
-    #[allow(dead_code)]
     pub fn new(
         model: String,
         dimensions: Option<u32>,
