@@ -13,33 +13,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        neo4j-image: [neo4j:5, neo4j:latest]
+        include:
+          - name: "neo4j:5"
+            neo4j-image: neo4j:5
+            cypher-default: ""
+            expected-cypher-default: "5"
+          - name: "neo4j:latest CYPHER_5"
+            neo4j-image: neo4j:latest
+            cypher-default: CYPHER_5
+            expected-cypher-default: "5"
+          - name: "neo4j:latest CYPHER_25"
+            neo4j-image: neo4j:latest
+            cypher-default: CYPHER_25
+            expected-cypher-default: "25"
 
-    name: test (${{ matrix.neo4j-image }})
-
-    services:
-      neo4j:
-        image: ${{ matrix.neo4j-image }}
-        ports:
-          - 7474:7474
-          - 7687:7687
-        env:
-          NEO4J_AUTH: neo4j/testpassword
-        options: >-
-          --health-cmd "wget -qO- http://localhost:7474 || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
-      ollama:
-        image: ollama/ollama:0.5.4
-        ports:
-          - 11434:11434
-        options: >-
-          --health-cmd "ollama list >/dev/null 2>&1 || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+    name: test (${{ matrix.name }})
 
     steps:
       - uses: actions/checkout@v4
@@ -56,8 +44,43 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Start Neo4j
+        run: |
+          ENV_ARGS=(-e NEO4J_AUTH=neo4j/testpassword)
+          if [ -n "${{ matrix.cypher-default }}" ]; then
+            ENV_ARGS+=(-e NEO4J_db_query_default__language=${{ matrix.cypher-default }})
+          fi
+          docker run -d --name neo4j-test \
+            -p 7474:7474 -p 7687:7687 \
+            "${ENV_ARGS[@]}" \
+            ${{ matrix.neo4j-image }}
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:7474 >/dev/null 2>&1; then
+              echo "Neo4j ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Neo4j failed to start"
+          docker logs neo4j-test
+          exit 1
+
+      - name: Start Ollama
+        run: |
+          docker run -d --name ollama-test -p 11434:11434 ollama/ollama:0.5.4
+          for i in $(seq 1 60); do
+            if docker exec ollama-test ollama list >/dev/null 2>&1; then
+              echo "Ollama ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Ollama failed to start"
+          docker logs ollama-test
+          exit 1
+
       - name: Pull all-minilm into Ollama
-        run: docker exec ${{ job.services.ollama.id }} ollama pull all-minilm
+        run: docker exec ollama-test ollama pull all-minilm
 
       - name: Unit tests
         run: cargo test
@@ -65,4 +88,5 @@ jobs:
       - name: Integration tests
         env:
           NEO4J_PASSWORD: testpassword
+          EXPECTED_CYPHER_DEFAULT: ${{ matrix.expected-cypher-default }}
         run: cargo test -- --ignored

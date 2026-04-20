@@ -346,6 +346,18 @@ fn schema_command() {
             .and(predicate::str::contains("defaultCypherVersion")),
     );
 
+    // In CI the matrix pins the expected value per job (5.x fallback, 2025 CYPHER_5,
+    // 2025 CYPHER_25). Locally the env var is unset — skip the exact-value check.
+    if let Ok(expected) = std::env::var("EXPECTED_CYPHER_DEFAULT") {
+        cmd()
+            .arg("schema")
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(format!(
+                "defaultCypherVersion: \"{expected}\""
+            )));
+    }
+
     // cleanup
     cmd()
         .arg("DROP CONSTRAINT schema_test_unique IF EXISTS")
