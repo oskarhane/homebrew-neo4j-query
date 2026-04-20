@@ -10,9 +10,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        neo4j-image: [neo4j:5, neo4j:latest]
+
+    name: test (${{ matrix.neo4j-image }})
+
     services:
       neo4j:
-        image: neo4j:5
+        image: ${{ matrix.neo4j-image }}
         ports:
           - 7474:7474
           - 7687:7687
