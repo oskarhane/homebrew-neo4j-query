@@ -146,7 +146,7 @@ tasks:
       `.claude/skills/neo4j-query/SKILL.md` MUST stay byte-identical.
       Add `huggingface` to the provider list in the embeddings
       section of both files. Verify with `diff` before committing.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -154,4 +154,4 @@ tasks:
       - "`diff skills/neo4j-query/SKILL.md .claude/skills/neo4j-query/SKILL.md` produces no output"
       - "Cargo.toml version field UNCHANGED"
       - "cargo build still succeeds (SKILL.md is include_str!'d into the binary)"
-    completed_at: null
+    completed_at: 2026-04-20T11:15:00Z

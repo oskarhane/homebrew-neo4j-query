@@ -163,3 +163,27 @@ Key Decisions:
   in the Configuration table).
 
 Next Task: task-007
+
+================================================================================
+TASK-007: Update both SKILL.md copies in sync with HuggingFace mention
+Date: 2026-04-20T11:15:00Z
+================================================================================
+
+Summary:
+Added "huggingface" to the NEO4J_EMBED_PROVIDER list in the Vector search /
+embeddings section of both SKILL.md copies. Single-line edit per file:
+"(`openai` or `ollama`)" -> "(`openai`, `ollama`, or `huggingface`)". Verified
+`diff skills/neo4j-query/SKILL.md .claude/skills/neo4j-query/SKILL.md` produces
+no output. cargo build clean (include_str! still compiles). Cargo.toml
+untouched.
+
+Files Changed:
+- skills/neo4j-query/SKILL.md (provider list)
+- .claude/skills/neo4j-query/SKILL.md (provider list)
+
+Key Decisions:
+- Minimal surface-area edit: only the provider enumeration line. Did NOT add a
+  HF-specific example block to SKILL.md since the token budget there is tight
+  and README already has the detailed recipe + clip caveat.
+
+Next Task: none (feature complete)

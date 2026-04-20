@@ -102,7 +102,7 @@ If the user provides a specific Cypher query, run it directly — don't fetch sc
 
 ## Vector search / embeddings
 
-`neo4j-query` can generate embedding vectors inline for vector search. This is **opt-in**: a provider must be configured via `NEO4J_EMBED_PROVIDER` (`openai` or `ollama`) plus `NEO4J_EMBED_MODEL`. Without those, `:embed` params and the `embed` subcommand error out — the CLI behaves as before.
+`neo4j-query` can generate embedding vectors inline for vector search. This is **opt-in**: a provider must be configured via `NEO4J_EMBED_PROVIDER` (`openai`, `ollama`, or `huggingface`) plus `NEO4J_EMBED_MODEL`. Without those, `:embed` params and the `embed` subcommand error out — the CLI behaves as before.
 
 Use `-P name:embed=...` in query mode to replace a text value with its embedding before the query runs:
 
