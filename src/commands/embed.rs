@@ -36,9 +36,6 @@ pub struct EmbedCmd {
     /// Output format.
     #[arg(long, value_enum, default_value = "json")]
     pub format: EmbedFormat,
-
-    #[command(flatten)]
-    pub embed_args: EmbedCliArgs,
 }
 
 /// Resolve the input text: prefer the positional arg, fall back to stdin.
@@ -70,11 +67,14 @@ fn resolve_text(arg: Option<String>) -> Result<String, String> {
     )
 }
 
-pub async fn run(cmd: EmbedCmd) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run(
+    cmd: EmbedCmd,
+    embed_args: &EmbedCliArgs,
+) -> Result<(), Box<dyn std::error::Error>> {
     let text = resolve_text(cmd.text)?;
     // `require` surfaces NotConfigured when no provider is set — matches
     // REQ-F-011 "embedding provider not configured: set NEO4J_EMBED_PROVIDER".
-    let config = EmbedConfig::require(&cmd.embed_args)?;
+    let config = EmbedConfig::require(embed_args)?;
     let provider = config.build()?;
     let vector = provider.embed(&text).await?;
 

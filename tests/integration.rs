@@ -981,3 +981,102 @@ fn embed_unknown_provider_errors() {
         .failure()
         .stderr(predicate::str::contains("unknown provider: bogus"));
 }
+
+// --- CLI-flag position tests for the `embed` subcommand ---
+//
+// Regression guard: `--embed-*` flags must reach the subcommand handler
+// regardless of whether they're typed BEFORE or AFTER the `embed`
+// subcommand name. Achieved via `global = true` on each EmbedCliArgs
+// field — same pattern as ConnectionArgs.
+//
+// Probe strategy: point at an obviously unreachable base URL so Ollama
+// fails fast with its own error string. If the flag didn't reach the
+// handler we'd see "embedding provider not configured: set
+// NEO4J_EMBED_PROVIDER" (NotConfigured) instead.
+
+const UNREACHABLE_OLLAMA: &str = "http://127.0.0.1:1";
+
+#[test]
+fn embed_cli_flags_before_subcommand() {
+    let mut c = embed_env_clean();
+    c.args([
+        "--embed-provider",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--embed-base-url",
+        UNREACHABLE_OLLAMA,
+        "embed",
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("ollama unreachable"))
+    .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
+}
+
+#[test]
+fn embed_cli_flags_after_subcommand() {
+    let mut c = embed_env_clean();
+    c.args([
+        "embed",
+        "--embed-provider",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--embed-base-url",
+        UNREACHABLE_OLLAMA,
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("ollama unreachable"))
+    .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
+}
+
+#[test]
+fn embed_dimensions_flag_reaches_subcommand() {
+    // --embed-dimensions is OpenAI-only; missing key short-circuits before
+    // any HTTP call. Proves the flag is accepted at root position.
+    let mut c = embed_env_clean();
+    c.args([
+        "--embed-provider",
+        "openai",
+        "--embed-model",
+        "text-embedding-3-small",
+        "--embed-dimensions",
+        "512",
+        "embed",
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains(
+        "missing API key for openai: set OPENAI_API_KEY",
+    ));
+}
+
+#[test]
+fn query_embed_cli_flags_before_query() {
+    // `-P v:embed=...` path: flags live on QueryArgs and must work when
+    // typed before the positional query. Unreachable base URL proves
+    // the flag reached the embed resolver.
+    let mut c = embed_env_clean();
+    c.env("NEO4J_PASSWORD", "x");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c.args([
+        "--embed-provider",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--embed-base-url",
+        UNREACHABLE_OLLAMA,
+        "-P",
+        "v:embed=hello",
+        "RETURN $v",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("ollama unreachable"))
+    .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
+}

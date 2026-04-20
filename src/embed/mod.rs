@@ -64,27 +64,28 @@ pub enum EmbedError {
 
 /// Clap-flattenable embed CLI flags.
 ///
-/// Flattened onto both `QueryArgs` (for `-P v:embed=...` resolution in
-/// query mode) and the `embed` subcommand. Every flag is backed by its
-/// `NEO4J_EMBED_*` environment variable via clap's `env` attribute, so
+/// Flattened once onto `QueryArgs`. Each field is `global = true` so the
+/// flags reach subcommand handlers regardless of whether the user typed
+/// them before or after the subcommand name — matching the
+/// `ConnectionArgs` pattern. Env-backed via clap's `env` attribute:
 /// precedence is CLI flag > shell env > `.env` (loaded by `load_env()`
 /// before clap parses).
 #[derive(Args, Debug, Clone, Default)]
 pub struct EmbedCliArgs {
     /// Embedding provider name (`openai` or `ollama`).
-    #[arg(long = "embed-provider", env = "NEO4J_EMBED_PROVIDER")]
+    #[arg(long = "embed-provider", global = true, env = "NEO4J_EMBED_PROVIDER")]
     pub provider: Option<String>,
 
     /// Embedding model name (e.g. `text-embedding-3-small`, `all-minilm`).
-    #[arg(long = "embed-model", env = "NEO4J_EMBED_MODEL")]
+    #[arg(long = "embed-model", global = true, env = "NEO4J_EMBED_MODEL")]
     pub model: Option<String>,
 
     /// Explicit output dimensions (OpenAI only; Ollama ignores).
-    #[arg(long = "embed-dimensions", env = "NEO4J_EMBED_DIMENSIONS")]
+    #[arg(long = "embed-dimensions", global = true, env = "NEO4J_EMBED_DIMENSIONS")]
     pub dimensions: Option<u32>,
 
     /// Override provider base URL.
-    #[arg(long = "embed-base-url", env = "NEO4J_EMBED_BASE_URL")]
+    #[arg(long = "embed-base-url", global = true, env = "NEO4J_EMBED_BASE_URL")]
     pub base_url: Option<String>,
 }
 

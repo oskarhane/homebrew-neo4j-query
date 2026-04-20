@@ -23,6 +23,7 @@ This is a single repo (`oskarhane/homebrew-neo4j-query`) that serves as both the
 - Connects via Neo4j's **HTTP API** (not Bolt). Default ports: `http://<host>:7474`, `https://<host>:7473`.
 - `ConnectionArgs.password` is `Option<String>` — subcommands that don't need DB access (like `skill`) work without it. Use `require_password()` in modes that need it.
 - `args_conflicts_with_subcommands = true` on Cli struct separates query-mode flags from subcommand flags.
+- **Flattened arg structs that subcommands need must mark every field `global = true`.** Flatten the struct ONCE onto `QueryArgs` (see `ConnectionArgs`, `EmbedCliArgs`). Never flatten the same struct onto both the root and a subcommand — flags typed before the subcommand land on the root copy and are invisible to the subcommand handler, producing silent config misses. Subcommand handlers receive the global args by destructuring `cli.query_args.<field>` at dispatch. When adding a new cross-cutting flag group, always add an integration test that passes the flags BEFORE the subcommand name.
 
 ## AI Agent Skill
 

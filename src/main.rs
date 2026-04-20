@@ -619,7 +619,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(())
             }
         },
-        Some(Commands::Embed(cmd)) => commands::embed::run(cmd).await,
+        Some(Commands::Embed(cmd)) => {
+            commands::embed::run(cmd, &cli.query_args.embed_args).await
+        }
         None => run_query_mode(cli.query_args).await,
     }
 }
