@@ -239,7 +239,7 @@ tasks:
       `NEO4J_EMBED_PROVIDER`, unknown modifier, OpenAI without API key,
       unknown provider name. Use `cmd_no_neo4j()` style helpers to avoid
       requiring a running DB.
-    status: pending
+    status: completed
     dependencies:
       - task-007
       - task-008
@@ -249,7 +249,7 @@ tasks:
       - "OpenAI missing-key test asserts 'missing API key for openai: set OPENAI_API_KEY'"
       - "Unknown provider test asserts 'unknown provider: <name>'"
       - "All four tests run as part of default `cargo test`"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-013
     title: "Update README.md with Embeddings section and config table"

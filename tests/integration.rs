@@ -914,3 +914,70 @@ fn query_mode_mixed_literal_and_embed_params() {
     assert!(parsed[0]["x"].is_i64());
     assert_eq!(parsed[0]["n"], ALL_MINILM_DIMS);
 }
+
+// --- Embedding error-path tests (no Neo4j, no Ollama required) ---
+//
+// Asserts the exact REQ-F-011 error strings. Each test strips embed-related
+// env vars so a dev with NEO4J_EMBED_* already exported in their shell
+// doesn't mask the failure mode under test.
+
+fn embed_env_clean() -> Command {
+    let mut c = Command::cargo_bin("neo4j-query").unwrap();
+    c.env_remove("NEO4J_EMBED_PROVIDER");
+    c.env_remove("NEO4J_EMBED_MODEL");
+    c.env_remove("NEO4J_EMBED_DIMENSIONS");
+    c.env_remove("NEO4J_EMBED_BASE_URL");
+    c.env_remove("NEO4J_EMBED_API_KEY");
+    c.env_remove("OPENAI_API_KEY");
+    c
+}
+
+#[test]
+fn embed_missing_provider_errors() {
+    // Password present so we get past require_password and into param resolution.
+    let mut c = embed_env_clean();
+    c.env("NEO4J_PASSWORD", "x");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c.args(["-P", "v:embed=hello", "RETURN $v"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "embedding provider not configured: set NEO4J_EMBED_PROVIDER",
+        ));
+}
+
+#[test]
+fn embed_unknown_modifier_errors() {
+    let mut c = embed_env_clean();
+    c.env("NEO4J_PASSWORD", "x");
+    c.env("NEO4J_URI", "http://localhost:19999");
+    c.args(["-P", "v:foo=hello", "RETURN $v"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown param modifier: :foo"));
+}
+
+#[test]
+fn embed_openai_missing_api_key_errors() {
+    // Embed subcommand avoids the Neo4j password requirement entirely.
+    let mut c = embed_env_clean();
+    c.env("NEO4J_EMBED_PROVIDER", "openai");
+    c.env("NEO4J_EMBED_MODEL", "text-embedding-3-small");
+    c.args(["embed", "hello"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "missing API key for openai: set OPENAI_API_KEY",
+        ));
+}
+
+#[test]
+fn embed_unknown_provider_errors() {
+    let mut c = embed_env_clean();
+    c.env("NEO4J_EMBED_PROVIDER", "bogus");
+    c.env("NEO4J_EMBED_MODEL", "some-model");
+    c.args(["embed", "hello"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown provider: bogus"));
+}

@@ -350,3 +350,37 @@ Key Decisions:
   instead of misleadingly failing.
 
 Next Task: task-012
+
+================================================================================
+TASK-012: Integration tests for error paths without Ollama
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added 4 non-#[ignore] integration tests in tests/integration.rs asserting the
+exact REQ-F-011 error strings for the four config/parse failure modes: missing
+provider with :embed, unknown param modifier, OpenAI without API key, unknown
+provider name. Added embed_env_clean() helper that strips NEO4J_EMBED_* and
+OPENAI_API_KEY from the child env so a dev shell with those already exported
+can't mask the failure under test. All 4 tests run as part of default cargo
+test (24 passing, was 20). Clippy + fmt clean.
+
+Files Changed:
+- tests/integration.rs (+embed_env_clean + 4 tests)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Query-mode path used for missing-provider + unknown-modifier tests because
+  those errors happen in parse_param_specs / resolve_params (post password
+  check). Supplied NEO4J_PASSWORD=x + dead port so the code reaches the
+  assertion point without needing a live DB.
+- Embed-subcommand path used for missing-API-key + unknown-provider tests —
+  no password requirement, shorter and more focused on the embed failure.
+- predicate::str::contains matches the existing stderr assertion style
+  (see wrong_password / missing_password_errors). The exact REQ-F-011
+  substring is present in the binary's "error: <msg>" line.
+- embed_env_clean strips even OPENAI_API_KEY so the openai-missing-key test
+  doesn't accidentally pass a real key from the dev's shell into the child.
+
+Next Task: task-013
