@@ -282,7 +282,7 @@ tasks:
       noting that the feature is opt-in (provider required), and
       showing an Ollama example. Both files must be byte-identical per
       the AGENTS.md sync rule.
-    status: pending
+    status: completed
     dependencies:
       - task-007
       - task-008
@@ -292,4 +292,4 @@ tasks:
       - "Section mentions the feature is opt-in and requires provider config"
       - "Ollama example present"
       - "Mentions -P name:embed=... syntax explicitly"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z

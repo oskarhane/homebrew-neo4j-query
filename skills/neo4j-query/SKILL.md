@@ -100,6 +100,37 @@ If the user asks a question about the data or asks you to explore/query **withou
 
 If the user provides a specific Cypher query, run it directly — don't fetch schema first.
 
+## Vector search / embeddings
+
+`neo4j-query` can generate embedding vectors inline for vector search. This is **opt-in**: a provider must be configured via `NEO4J_EMBED_PROVIDER` (`openai` or `ollama`) plus `NEO4J_EMBED_MODEL`. Without those, `:embed` params and the `embed` subcommand error out — the CLI behaves as before.
+
+Use `-P name:embed=...` in query mode to replace a text value with its embedding before the query runs:
+
+```bash
+neo4j-query -P q:embed='science fiction movies about AI' \
+  "CALL db.index.vector.queryNodes('movie_embeddings', 5, \$q)
+   YIELD node, score RETURN node.title AS title, score"
+```
+
+Other `-P` params keep normal type coercion, so mix freely:
+
+```bash
+neo4j-query -P k=5 -P q:embed='sci-fi movies' \
+  "CALL db.index.vector.queryNodes('movie_embeddings', \$k, \$q)
+   YIELD node, score RETURN node.title, score"
+```
+
+Ollama example (local, free, no API key):
+
+```bash
+export NEO4J_EMBED_PROVIDER=ollama
+export NEO4J_EMBED_MODEL=all-minilm   # after: ollama pull all-minilm
+
+neo4j-query -P q:embed='hello' 'RETURN size($q) AS dims'
+```
+
+Use the `embed` subcommand to preview a vector without hitting Neo4j: `neo4j-query embed 'hello'` (JSON array) or `--format raw` for newline-separated floats.
+
 ## Tips
 
 - Run `neo4j-query schema` before generating Cypher — never assume you know the schema

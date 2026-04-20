@@ -414,3 +414,34 @@ Key Decisions:
   one command line that actually works end-to-end today.
 
 Next Task: task-014
+
+================================================================================
+TASK-014: Update both SKILL.md copies in sync
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added "Vector search / embeddings" section to both skills/neo4j-query/SKILL.md
+and .claude/skills/neo4j-query/SKILL.md. Covers opt-in provider requirement,
+-P name:embed=... syntax, mixed literal+embed params, Ollama quickstart, and
+the embed subcommand. Files verified byte-identical via diff. cargo build
+clean (include_str! on SKILL.md recompiles the binary).
+
+Files Changed:
+- skills/neo4j-query/SKILL.md (+embeddings section)
+- .claude/skills/neo4j-query/SKILL.md (+embeddings section, byte-identical)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Placed new section between "When given a user argument" and "Tips" so the
+  opt-in feature doesn't interrupt the core query/schema flow new users read
+  top-down.
+- Kept the Ollama example one-liner (export + single query) instead of the
+  README's full .env recipe — SKILL.md targets an in-session agent that
+  already has env wired.
+- Used `RETURN size($q) AS dims` in the Ollama example (same pattern as
+  task-011 integration tests) — proves the vector round-trips without
+  dumping 384 floats into the agent's context.
+
+Next Task: none (feature complete)
