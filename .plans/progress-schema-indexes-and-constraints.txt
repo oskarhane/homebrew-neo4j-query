@@ -1,0 +1,22 @@
+================================================================================
+TASK-001: Add SHOW INDEXES query + indexes array to run_schema
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended run_schema in src/main.rs w/ 4th step issuing SHOW INDEXES via
+existing run_cypher. Each row mapped to JSON object (name/type/entityType/
+labelsOrTypes/properties/state/owningConstraint/options) via new
+insert_if_present helper that elides null/empty-string/empty-array/empty-object
+fields. Array sorted by name ascending, attached under `indexes` key sibling
+to nodes/relationships. No filtering (system/LOOKUP included).
+
+Files Changed:
+- src/main.rs (modified: added SHOW INDEXES block + insert_if_present helper)
+- .plans/tasks-schema-indexes-and-constraints.yml (task-001 marked completed)
+
+Key Decisions:
+- Added reusable insert_if_present helper (task-002 will reuse for constraints)
+- options passed through as opaque Value so vector/fulltext config surfaces
+
+Next Task: task-002
