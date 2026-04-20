@@ -81,3 +81,30 @@ Key Decisions:
 
 Next Task: task-004
 
+================================================================================
+TASK-004: Non-ignored integration tests for missing key + CLI flag positions
+Date: 2026-04-20T10:30:00Z
+================================================================================
+
+Summary:
+Extended embed_env_clean() to strip HF_TOKEN. Added two non-ignored integration
+tests: huggingface_missing_api_key_errors asserts exact REQ-F-008 missing-key
+string; huggingface_cli_flags_before_subcommand regresses the AGENTS.md
+global=true flag wiring by placing --embed-provider/--embed-model BEFORE the
+embed subcommand and verifying the same missing-key error fires. 30/30
+integration tests pass (up from 28). 75/75 unit tests still green. clippy +
+fmt clean.
+
+Files Changed:
+- tests/integration.rs (embed_env_clean HF_TOKEN strip + 2 new tests)
+
+Key Decisions:
+- Used the model sentinel "anything" for the flag-position test (never hits
+  network since missing-key short-circuits inside EmbedConfig::build).
+- Reused clip-ViT-B-32-multilingual-v1 as a realistic model name in the
+  missing-key test for doc value.
+- No external services touched by either test; both gated on the MissingApiKey
+  error path which fires before any HTTP is attempted.
+
+Next Task: task-005
+

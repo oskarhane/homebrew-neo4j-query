@@ -929,6 +929,7 @@ fn embed_env_clean() -> Command {
     c.env_remove("NEO4J_EMBED_BASE_URL");
     c.env_remove("NEO4J_EMBED_API_KEY");
     c.env_remove("OPENAI_API_KEY");
+    c.env_remove("HF_TOKEN");
     c
 }
 
@@ -968,6 +969,22 @@ fn embed_openai_missing_api_key_errors() {
         .failure()
         .stderr(predicate::str::contains(
             "missing API key for openai: set OPENAI_API_KEY",
+        ));
+}
+
+#[test]
+fn huggingface_missing_api_key_errors() {
+    let mut c = embed_env_clean();
+    c.env("NEO4J_EMBED_PROVIDER", "huggingface");
+    c.env(
+        "NEO4J_EMBED_MODEL",
+        "sentence-transformers/clip-ViT-B-32-multilingual-v1",
+    );
+    c.args(["embed", "hello"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "missing API key for huggingface: set HF_TOKEN",
         ));
 }
 
@@ -1013,6 +1030,28 @@ fn embed_cli_flags_before_subcommand() {
     .failure()
     .stderr(predicate::str::contains("ollama unreachable"))
     .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
+}
+
+#[test]
+fn huggingface_cli_flags_before_subcommand() {
+    // Regression guard per AGENTS.md "CLI Architecture" rule: global=true
+    // flags must reach the subcommand handler when typed BEFORE `embed`.
+    // Missing-key short-circuit proves the flags arrived (otherwise we'd
+    // see "embedding provider not configured" instead).
+    let mut c = embed_env_clean();
+    c.args([
+        "--embed-provider",
+        "huggingface",
+        "--embed-model",
+        "anything",
+        "embed",
+        "hello",
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains(
+        "missing API key for huggingface: set HF_TOKEN",
+    ));
 }
 
 #[test]

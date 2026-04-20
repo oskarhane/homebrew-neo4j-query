@@ -83,7 +83,7 @@ tasks:
       `embed` subcommand and verifies the missing-API-key error fires
       (proves global=true flag wiring still works for the new provider —
       mirrors the AGENTS.md "CLI Architecture" rule).
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -92,7 +92,7 @@ tasks:
       - "huggingface_cli_flags_before_subcommand passes with flags BEFORE subcommand"
       - "Both tests assert the exact REQ-F-008 missing-key string"
       - "All existing integration tests still pass"
-    completed_at: null
+    completed_at: 2026-04-20T10:30:00Z
 
   - id: task-005
     title: "Optional ignored integration test against real HF serverless"
