@@ -1,0 +1,19 @@
+================================================================================
+TASK-001: Add embed dependencies and bump version to 0.11.0
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added thiserror = "1" and async-trait = "0.1" to [dependencies]. Bumped
+version from 0.1.0 to 0.11.0. Existing reqwest features already cover embed
+HTTP calls. No new dev-deps.
+
+Files Changed:
+- Cargo.toml (bump version, add thiserror + async-trait)
+- Cargo.lock (regenerated via cargo build)
+
+Key Decisions:
+- thiserror 1.x chosen per spec (crate graph already pulls 2.x for transitive deps; both coexist)
+- No wiremock or other dev-deps added
+
+Next Task: task-002
