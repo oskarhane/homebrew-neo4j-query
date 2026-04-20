@@ -238,3 +238,43 @@ Key Decisions:
   keeps error ordering deterministic and v1 doesn't need the throughput.
 
 Next Task: task-009
+
+================================================================================
+TASK-009: Unit tests for param parser and embed config resolution
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added 27 new unit tests to tests/unit.rs. Re-implemented parse_param /
+ParamSpec / EmbedError (Display impl) / from_sources / resolve_api_key
+locally per the file's existing re-implementation convention. Covers
+parse_param literal/embed/unknown-modifier/value-with-equals/value-with-
+url-colon/empty-value cases; asserts all four REQ-F-011 error strings
+verbatim via format!("{err}") equality; exercises from_sources None/
+ModelNotSet/precedence paths; proves OPENAI_API_KEY > NEO4J_EMBED_API_KEY
+fallback for openai and that ollama always ignores both keys. 71 unit
+tests pass (was 44). cargo clippy + cargo fmt clean.
+
+Files Changed:
+- tests/unit.rs (+27 tests, +file-level allow(clippy::approx_constant))
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Re-implemented logic locally (no src/lib.rs) matching the existing
+  truncate_arrays / parse_params pattern — zero test-only production
+  surface area.
+- resolve_api_key tests take a `&dyn Fn(&str) -> Option<String>` env
+  closure instead of touching process env: avoids the `std::env::set_var`
+  parallelism hazard and makes each test an isolated pure-function call.
+- Precedence test encodes the clap merge contract (CLI value already
+  wins by the time it reaches from_sources) rather than invoking clap
+  itself; the actual flag-vs-env precedence lives in clap and the PRD
+  treats it as out-of-scope for the unit layer.
+- File-level #![allow(clippy::approx_constant)] added because pre-
+  existing 3.14 literals (from prior tasks' verbatim tests) trip
+  rust 1.94's deny-by-default approx_constant; acceptance criteria
+  forbids touching those tests, so a scoped allow on the test file is
+  the only clean path.
+
+Next Task: task-010

@@ -13,6 +13,11 @@ This is a single repo (`oskarhane/homebrew-neo4j-query`) that serves as both the
 - **LINT**: `cargo clippy`
 - **FORMAT**: `cargo fmt --check`
 
+## Testing conventions
+
+- `tests/unit.rs` re-implements private functions locally rather than importing from the crate (no `src/lib.rs`). When testing `src/*` logic, copy the function verbatim into `tests/unit.rs` and call it — matches the pattern used for `parse_param_value`, `parse_params`, `truncate_arrays`, `parse_param`, `EmbedError`, `resolve_api_key`.
+- Avoid `3.14` in tests — rust 1.94 `clippy::approx_constant` denies it. Use `2.5` or another non-PI float, or add `#![allow(clippy::approx_constant)]` at the top of the test file.
+
 ## CLI Architecture
 
 - Connects via Neo4j's **HTTP API** (not Bolt). Default ports: `http://<host>:7474`, `https://<host>:7473`.

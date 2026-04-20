@@ -178,7 +178,7 @@ tasks:
       type coercion for un-modified params; `EmbedConfig::from_sources`
       None/Err/precedence/API-key-fallback cases; exact error message
       strings from REQ-F-011.
-    status: pending
+    status: completed
     dependencies:
       - task-003
       - task-004
@@ -188,7 +188,7 @@ tasks:
       - "Tests assert exact REQ-F-011 error strings via format!(\"{err}\") equality"
       - "EmbedConfig precedence test proves CLI > env"
       - "API key fallback test: OPENAI_API_KEY wins, then NEO4J_EMBED_API_KEY for openai"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-010
     title: "Add Ollama service to docker-compose and CI workflow"

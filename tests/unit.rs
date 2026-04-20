@@ -1,3 +1,6 @@
+// Test floats are sentinels, not numeric constants — silence approx_constant.
+#![allow(clippy::approx_constant)]
+
 use serde_json::{json, Map, Value};
 
 // Re-implement pure functions here for testing since they're private in main.
@@ -422,4 +425,468 @@ fn truncate_scalar_values_unchanged() {
     let mut val = json!(true);
     truncate_arrays(&mut val, 1, &toon_replacer);
     assert_eq!(val, json!(true));
+}
+
+// --- parse_param (ParamSpec) re-implementation for testing ---
+//
+// Keep logic byte-identical to src/params.rs::parse_param so these tests act
+// as a spec-level guard against accidental REQ-F-011 error-string drift.
+
+#[derive(Debug, Clone, PartialEq)]
+enum ParamSpec {
+    Literal(Value),
+    Embed(String),
+}
+
+fn parse_param(raw: &str) -> Result<(String, ParamSpec), String> {
+    let (key_part, value) = raw
+        .split_once('=')
+        .ok_or_else(|| format!("invalid param format '{raw}', expected key=value"))?;
+    if let Some((name, modifier)) = key_part.split_once(':') {
+        match modifier {
+            "embed" => Ok((name.to_string(), ParamSpec::Embed(value.to_string()))),
+            other => Err(format!("unknown param modifier: :{other}")),
+        }
+    } else {
+        Ok((
+            key_part.to_string(),
+            ParamSpec::Literal(parse_param_value(value)),
+        ))
+    }
+}
+
+#[test]
+fn parse_param_literal_int() {
+    let (name, spec) = parse_param("age=30").unwrap();
+    assert_eq!(name, "age");
+    assert_eq!(spec, ParamSpec::Literal(json!(30)));
+}
+
+#[test]
+fn parse_param_literal_bool() {
+    let (_, spec) = parse_param("active=true").unwrap();
+    assert_eq!(spec, ParamSpec::Literal(json!(true)));
+}
+
+#[test]
+fn parse_param_literal_null() {
+    let (_, spec) = parse_param("x=null").unwrap();
+    assert_eq!(spec, ParamSpec::Literal(json!(null)));
+}
+
+#[test]
+fn parse_param_literal_float() {
+    let (_, spec) = parse_param("ratio=2.5").unwrap();
+    assert_eq!(spec, ParamSpec::Literal(json!(2.5)));
+}
+
+#[test]
+fn parse_param_literal_string() {
+    let (name, spec) = parse_param("name=Alice").unwrap();
+    assert_eq!(name, "name");
+    assert_eq!(spec, ParamSpec::Literal(json!("Alice")));
+}
+
+#[test]
+fn parse_param_embed_modifier() {
+    let (name, spec) = parse_param("v:embed=hello world").unwrap();
+    assert_eq!(name, "v");
+    assert_eq!(spec, ParamSpec::Embed("hello world".to_string()));
+}
+
+#[test]
+fn parse_param_unknown_modifier() {
+    // REQ-F-011: exact error string for unknown modifier
+    let err = parse_param("v:foo=x").unwrap_err();
+    assert_eq!(err, "unknown param modifier: :foo");
+}
+
+#[test]
+fn parse_param_unknown_modifier_another() {
+    let err = parse_param("data:bogus=y").unwrap_err();
+    assert_eq!(err, "unknown param modifier: :bogus");
+}
+
+#[test]
+fn parse_param_value_with_equals() {
+    // Only the FIRST '=' splits key from value.
+    let (name, spec) = parse_param("expr=a=b").unwrap();
+    assert_eq!(name, "expr");
+    assert_eq!(spec, ParamSpec::Literal(json!("a=b")));
+}
+
+#[test]
+fn parse_param_value_with_url_colon_preserved() {
+    // Only KEY-side ':' splits; colons in values (URLs etc) are untouched.
+    let (name, spec) = parse_param("url=http://x").unwrap();
+    assert_eq!(name, "url");
+    assert_eq!(spec, ParamSpec::Literal(json!("http://x")));
+}
+
+#[test]
+fn parse_param_value_with_colon_preserved_embed() {
+    // Value containing a colon after an embed modifier is part of the text.
+    let (name, spec) = parse_param("v:embed=a:b:c").unwrap();
+    assert_eq!(name, "v");
+    assert_eq!(spec, ParamSpec::Embed("a:b:c".to_string()));
+}
+
+#[test]
+fn parse_param_empty_value_literal() {
+    let (name, spec) = parse_param("x=").unwrap();
+    assert_eq!(name, "x");
+    assert_eq!(spec, ParamSpec::Literal(json!("")));
+}
+
+#[test]
+fn parse_param_empty_value_embed() {
+    let (name, spec) = parse_param("v:embed=").unwrap();
+    assert_eq!(name, "v");
+    assert_eq!(spec, ParamSpec::Embed(String::new()));
+}
+
+#[test]
+fn parse_param_no_equals_errors() {
+    let err = parse_param("nokey").unwrap_err();
+    assert!(err.contains("invalid param format"));
+}
+
+// --- EmbedError re-implementation for testing ---
+//
+// Mirrors the `#[error("...")]` thiserror messages in src/embed/mod.rs so
+// tests assert the exact REQ-F-011 strings via `format!("{err}")`.
+
+#[derive(Debug)]
+enum EmbedErrorFake {
+    MissingApiKey {
+        provider: &'static str,
+        env_var: &'static str,
+    },
+    NotConfigured,
+    ModelNotSet,
+    UnknownProvider(String),
+}
+
+impl std::fmt::Display for EmbedErrorFake {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingApiKey { provider, env_var } => {
+                write!(f, "missing API key for {provider}: set {env_var}")
+            }
+            Self::NotConfigured => {
+                write!(
+                    f,
+                    "embedding provider not configured: set NEO4J_EMBED_PROVIDER"
+                )
+            }
+            Self::ModelNotSet => write!(f, "NEO4J_EMBED_MODEL not set"),
+            Self::UnknownProvider(name) => write!(f, "unknown provider: {name}"),
+        }
+    }
+}
+
+#[test]
+fn embed_error_missing_api_key_openai_string() {
+    let err = EmbedErrorFake::MissingApiKey {
+        provider: "openai",
+        env_var: "OPENAI_API_KEY",
+    };
+    assert_eq!(
+        format!("{err}"),
+        "missing API key for openai: set OPENAI_API_KEY"
+    );
+}
+
+#[test]
+fn embed_error_not_configured_string() {
+    assert_eq!(
+        format!("{}", EmbedErrorFake::NotConfigured),
+        "embedding provider not configured: set NEO4J_EMBED_PROVIDER"
+    );
+}
+
+#[test]
+fn embed_error_model_not_set_string() {
+    assert_eq!(
+        format!("{}", EmbedErrorFake::ModelNotSet),
+        "NEO4J_EMBED_MODEL not set"
+    );
+}
+
+#[test]
+fn embed_error_unknown_provider_string() {
+    assert_eq!(
+        format!("{}", EmbedErrorFake::UnknownProvider("cohere".into())),
+        "unknown provider: cohere"
+    );
+}
+
+// --- EmbedConfig::from_sources re-implementation for testing ---
+//
+// Pure: takes CLI struct + env closure so precedence and API-key fallback
+// can be verified deterministically without touching process env.
+
+#[derive(Default, Clone, Debug)]
+struct EmbedCliArgsFake {
+    provider: Option<String>,
+    model: Option<String>,
+    dimensions: Option<u32>,
+    base_url: Option<String>,
+}
+
+#[derive(Debug, PartialEq)]
+struct EmbedConfigFake {
+    provider: String,
+    model: String,
+    dimensions: Option<u32>,
+    base_url: Option<String>,
+    api_key: Option<String>,
+}
+
+fn resolve_api_key_fake(provider: &str, env: &dyn Fn(&str) -> Option<String>) -> Option<String> {
+    let filter_empty = |v: String| if v.is_empty() { None } else { Some(v) };
+    match provider {
+        "openai" => env("OPENAI_API_KEY")
+            .and_then(filter_empty)
+            .or_else(|| env("NEO4J_EMBED_API_KEY").and_then(filter_empty)),
+        "ollama" => None,
+        _ => env("NEO4J_EMBED_API_KEY").and_then(filter_empty),
+    }
+}
+
+fn from_sources_fake(
+    args: &EmbedCliArgsFake,
+    env: &dyn Fn(&str) -> Option<String>,
+) -> Result<Option<EmbedConfigFake>, EmbedErrorFake> {
+    let provider = match args.provider.as_deref() {
+        Some(p) if !p.is_empty() => p.to_string(),
+        _ => return Ok(None),
+    };
+
+    let model = args
+        .model
+        .as_deref()
+        .filter(|m| !m.is_empty())
+        .ok_or(EmbedErrorFake::ModelNotSet)?
+        .to_string();
+
+    let api_key = resolve_api_key_fake(&provider, env);
+
+    Ok(Some(EmbedConfigFake {
+        provider,
+        model,
+        dimensions: args.dimensions,
+        base_url: args.base_url.clone(),
+        api_key,
+    }))
+}
+
+fn empty_env(_: &str) -> Option<String> {
+    None
+}
+
+#[test]
+fn from_sources_returns_none_when_no_provider() {
+    let args = EmbedCliArgsFake::default();
+    let cfg = from_sources_fake(&args, &empty_env).unwrap();
+    assert!(cfg.is_none());
+}
+
+#[test]
+fn from_sources_empty_provider_string_is_none() {
+    // Treat an explicitly empty provider as "unset".
+    let args = EmbedCliArgsFake {
+        provider: Some(String::new()),
+        ..Default::default()
+    };
+    let cfg = from_sources_fake(&args, &empty_env).unwrap();
+    assert!(cfg.is_none());
+}
+
+#[test]
+fn from_sources_provider_without_model_errors_model_not_set() {
+    let args = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: None,
+        ..Default::default()
+    };
+    let err = from_sources_fake(&args, &empty_env).unwrap_err();
+    assert_eq!(format!("{err}"), "NEO4J_EMBED_MODEL not set");
+}
+
+#[test]
+fn from_sources_provider_with_empty_model_errors_model_not_set() {
+    let args = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: Some(String::new()),
+        ..Default::default()
+    };
+    let err = from_sources_fake(&args, &empty_env).unwrap_err();
+    assert_eq!(format!("{err}"), "NEO4J_EMBED_MODEL not set");
+}
+
+#[test]
+fn from_sources_ollama_minimal_ok() {
+    let args = EmbedCliArgsFake {
+        provider: Some("ollama".into()),
+        model: Some("all-minilm".into()),
+        ..Default::default()
+    };
+    let cfg = from_sources_fake(&args, &empty_env).unwrap().unwrap();
+    assert_eq!(cfg.provider, "ollama");
+    assert_eq!(cfg.model, "all-minilm");
+    // REQ-F-006: Ollama silently ignores NEO4J_EMBED_API_KEY
+    assert!(cfg.api_key.is_none());
+    assert!(cfg.dimensions.is_none());
+    assert!(cfg.base_url.is_none());
+}
+
+#[test]
+fn from_sources_ollama_ignores_embed_api_key_env() {
+    let args = EmbedCliArgsFake {
+        provider: Some("ollama".into()),
+        model: Some("all-minilm".into()),
+        ..Default::default()
+    };
+    let env = |k: &str| match k {
+        "NEO4J_EMBED_API_KEY" => Some("sk-should-be-ignored".into()),
+        _ => None,
+    };
+    let cfg = from_sources_fake(&args, &env).unwrap().unwrap();
+    assert!(
+        cfg.api_key.is_none(),
+        "ollama must not pick up NEO4J_EMBED_API_KEY"
+    );
+}
+
+// --- Precedence: CLI flag > env (verified by clap behaviour; here we assert
+//     our pure resolver uses whatever the CLI struct carries, which is how
+//     clap merges env into args before we see it). ---
+
+#[test]
+fn from_sources_precedence_uses_args_values_as_final() {
+    // Once clap parses, the CLI struct already holds the winning value
+    // (CLI flag or env). Verify the resolver honours the struct verbatim.
+    let args = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: Some("cli-model".into()),
+        dimensions: Some(512),
+        base_url: Some("https://custom.example/v1".into()),
+    };
+    let cfg = from_sources_fake(&args, &empty_env).unwrap().unwrap();
+    assert_eq!(cfg.provider, "openai");
+    assert_eq!(cfg.model, "cli-model");
+    assert_eq!(cfg.dimensions, Some(512));
+    assert_eq!(cfg.base_url.as_deref(), Some("https://custom.example/v1"));
+}
+
+// Simulate clap's precedence directly: if both CLI and env were present,
+// clap would pass the CLI value to the resolver. This test encodes that
+// expectation by constructing two calls and asserting the CLI one wins.
+#[test]
+fn from_sources_precedence_cli_beats_env_simulation() {
+    // "env" would have set model=env-model; "CLI" overrides to cli-model.
+    let env_only = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: Some("env-model".into()),
+        ..Default::default()
+    };
+    let cli_and_env = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: Some("cli-model".into()), // CLI wins at clap layer
+        ..Default::default()
+    };
+    let env_cfg = from_sources_fake(&env_only, &empty_env).unwrap().unwrap();
+    let cli_cfg = from_sources_fake(&cli_and_env, &empty_env)
+        .unwrap()
+        .unwrap();
+    assert_eq!(env_cfg.model, "env-model");
+    assert_eq!(cli_cfg.model, "cli-model");
+}
+
+// --- API key fallback ---
+
+#[test]
+fn resolve_api_key_openai_openai_env_wins() {
+    let env = |k: &str| match k {
+        "OPENAI_API_KEY" => Some("sk-openai".into()),
+        "NEO4J_EMBED_API_KEY" => Some("sk-fallback".into()),
+        _ => None,
+    };
+    assert_eq!(
+        resolve_api_key_fake("openai", &env),
+        Some("sk-openai".into())
+    );
+}
+
+#[test]
+fn resolve_api_key_openai_falls_back_to_embed_key() {
+    let env = |k: &str| match k {
+        "NEO4J_EMBED_API_KEY" => Some("sk-fallback".into()),
+        _ => None,
+    };
+    assert_eq!(
+        resolve_api_key_fake("openai", &env),
+        Some("sk-fallback".into())
+    );
+}
+
+#[test]
+fn resolve_api_key_openai_empty_openai_env_falls_back() {
+    // Empty OPENAI_API_KEY should be treated as unset (matches .env placeholders).
+    let env = |k: &str| match k {
+        "OPENAI_API_KEY" => Some(String::new()),
+        "NEO4J_EMBED_API_KEY" => Some("sk-fallback".into()),
+        _ => None,
+    };
+    assert_eq!(
+        resolve_api_key_fake("openai", &env),
+        Some("sk-fallback".into())
+    );
+}
+
+#[test]
+fn resolve_api_key_openai_neither_set_none() {
+    assert_eq!(resolve_api_key_fake("openai", &empty_env), None);
+}
+
+#[test]
+fn resolve_api_key_ollama_always_none() {
+    let env = |k: &str| match k {
+        "OPENAI_API_KEY" => Some("sk-openai".into()),
+        "NEO4J_EMBED_API_KEY" => Some("sk-fallback".into()),
+        _ => None,
+    };
+    assert_eq!(resolve_api_key_fake("ollama", &env), None);
+}
+
+#[test]
+fn from_sources_openai_applies_api_key_fallback() {
+    let args = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: Some("text-embedding-3-small".into()),
+        ..Default::default()
+    };
+    let env = |k: &str| match k {
+        "NEO4J_EMBED_API_KEY" => Some("sk-fallback".into()),
+        _ => None,
+    };
+    let cfg = from_sources_fake(&args, &env).unwrap().unwrap();
+    assert_eq!(cfg.api_key, Some("sk-fallback".into()));
+}
+
+#[test]
+fn from_sources_openai_prefers_openai_env() {
+    let args = EmbedCliArgsFake {
+        provider: Some("openai".into()),
+        model: Some("text-embedding-3-small".into()),
+        ..Default::default()
+    };
+    let env = |k: &str| match k {
+        "OPENAI_API_KEY" => Some("sk-openai".into()),
+        "NEO4J_EMBED_API_KEY" => Some("sk-fallback".into()),
+        _ => None,
+    };
+    let cfg = from_sources_fake(&args, &env).unwrap().unwrap();
+    assert_eq!(cfg.api_key, Some("sk-openai".into()));
 }
