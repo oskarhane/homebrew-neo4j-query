@@ -384,3 +384,33 @@ Key Decisions:
   doesn't accidentally pass a real key from the dev's shell into the child.
 
 Next Task: task-013
+
+================================================================================
+TASK-013: Update README.md with Embeddings section and config table
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added Embeddings section to README covering :embed modifier, embed subcommand,
+and setup recipes for Ollama (local) and OpenAI (hosted). Included motivating
+db.index.vector.queryNodes example. Extended Configuration table with 6 new
+rows: NEO4J_EMBED_PROVIDER, NEO4J_EMBED_MODEL, NEO4J_EMBED_DIMENSIONS,
+NEO4J_EMBED_BASE_URL, OPENAI_API_KEY, NEO4J_EMBED_API_KEY.
+
+Files Changed:
+- README.md (+Embeddings section, +6 config table rows, +opt-in note)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Used \$q (escaped) inside shell example code blocks so copy-paste works from
+  a POSIX shell without premature variable expansion.
+- Kept the two vector-search examples minimal: first shows pure :embed, second
+  shows mixed literal+embed (k=5) to reinforce REQ-F-002 type-coercion
+  preservation without duplicating the full round-trip integration test.
+- Documented the opt-in behaviour twice (section intro + below config table)
+  because users skim either one depending on entry point.
+- Chose all-minilm in the Ollama recipe to match the CI pin from task-010 —
+  one command line that actually works end-to-end today.
+
+Next Task: task-014
