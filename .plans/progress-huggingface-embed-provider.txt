@@ -1,0 +1,28 @@
+================================================================================
+TASK-001: Implement HuggingFace provider in src/embed/huggingface.rs
+Date: 2026-04-20T09:53:32Z
+================================================================================
+
+Summary:
+Created new src/embed/huggingface.rs implementing EmbedProvider. Modeled on
+ollama.rs structure + openai.rs bearer_auth. Handles dedicated-vs-serverless
+routing via base_url: Option<String>. Parser accepts both nested [[f32]] and
+flat [f32] response shapes via serde_json::Value branching. Error strings
+prefixed with "huggingface" per the ollama pattern so Display yields
+substring-matchable output.
+
+Files Changed:
+- src/embed/huggingface.rs (new)
+
+Key Decisions:
+- Empty-string base_url treated as None (dotenv stub-line ergonomics, matches
+  openai/ollama pattern).
+- Error messages prefix "huggingface" inside ProviderError.message so
+  integration tests can assert contains("huggingface auth failed") despite the
+  EmbedError Display format wrapping as "{provider} error: {message}".
+- 6 in-file unit tests (#[cfg(test)] mod tests) cover parse_embedding shapes,
+  request_url routing, and missing/empty key errors. No external mocking deps.
+- Compile verification deferred to task-002 which adds `pub mod huggingface;`
+  — task-001 writes the file only per PRD REQ-F-009 scope split.
+
+Next Task: task-002

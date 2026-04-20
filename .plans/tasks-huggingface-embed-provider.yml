@@ -19,7 +19,7 @@ tasks:
       branching. Map errors per REQ-F-008 (auth, 404 with multilingual
       hint, generic non-2xx, connect/timeout, empty) using existing
       `EmbedError::ProviderError { provider: "huggingface", message }`.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "src/embed/huggingface.rs compiles and exports HuggingFace struct"
@@ -29,9 +29,7 @@ tasks:
       - "401/403 → 'huggingface auth failed: check HF_TOKEN scopes (needs Inference Providers permission)'"
       - "404 → contains both 'not deployed by any Inference Provider' and \"'<model>-multilingual-v1'\""
       - "No new EmbedError variants added; uses ProviderError + MissingApiKey"
-    completed_at: null
-
-  - id: task-002
+    completed_at: 2026-04-20T09:53:32Z
     title: "Wire huggingface into EmbedConfig::build and resolve_api_key"
     description: |
       Edit `src/embed/mod.rs`. Add `pub mod huggingface;`. Add a
