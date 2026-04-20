@@ -10,6 +10,7 @@ This is a single repo (`oskarhane/homebrew-neo4j-query`) that serves as both the
 - **BUILD**: `cargo build`
 - **TEST (unit)**: `cargo test`
 - **TEST (integration, needs Neo4j)**: `cargo test -- --ignored`
+  - **Always start a fresh container for integration tests — never reuse an existing one.** `docker rm -f neo4j-test 2>/dev/null; docker run -d --name neo4j-test -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/testpassword neo4j:5` then wait for `http://localhost:7474` before running tests. Stop/remove after.
 - **LINT**: `cargo clippy`
 - **FORMAT**: `cargo fmt --check`
 
