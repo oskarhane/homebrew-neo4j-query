@@ -1,0 +1,295 @@
+feature: embedding-support
+prd: ./prd-embedding-support.md
+created_at: 2026-04-20T00:00:00Z
+updated_at: 2026-04-20T00:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Add embed dependencies and bump version to 0.11.0"
+    description: |
+      Add `thiserror = "1"` and `async-trait = "0.1"` to `[dependencies]` in
+      `Cargo.toml`. Bump `version` from `0.1.0` to `0.11.0`. Confirm existing
+      `reqwest` features (`json`, `rustls-tls`) cover embed HTTP calls. No new
+      dev-deps (no `wiremock`).
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "Cargo.toml version = 0.11.0"
+      - "thiserror = \"1\" present in [dependencies]"
+      - "async-trait = \"0.1\" present in [dependencies]"
+      - "cargo build succeeds with no other changes"
+      - "No new dev-dependencies added"
+    completed_at: null
+
+  - id: task-002
+    title: "Refactor main.rs into module layout with no behavior change"
+    description: |
+      Split `src/main.rs` (617 lines) into the module layout from REQ-NF-001:
+      create `src/embed/mod.rs`, `src/embed/openai.rs`, `src/embed/ollama.rs`,
+      `src/params.rs`, `src/commands/embed.rs` (stubs where needed).
+      Move `parse_param_value` and `parse_params` into `src/params.rs`.
+      `main.rs` keeps clap root, `load_env`, query execution, retries,
+      `run_schema*`, `run_query_mode`, `main`. All existing tests must pass
+      unchanged.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "New module files exist at paths in REQ-NF-001"
+      - "src/main.rs no longer contains parse_param_value or parse_params bodies"
+      - "cargo test passes with zero new or modified tests"
+      - "cargo clippy clean"
+      - "cargo fmt --check clean"
+    completed_at: null
+
+  - id: task-003
+    title: "Implement ParamSpec enum and parse_param with :modifier support"
+    description: |
+      In `src/params.rs`, add `pub enum ParamSpec { Literal(serde_json::Value),
+      Embed(String) }` and `pub fn parse_param(raw: &str) -> Result<(String,
+      ParamSpec), String>`. Split only the FIRST `:` in the key part. Preserve
+      existing type coercion for literals by applying `parse_param_value` to
+      the literal arm. Error on unknown modifiers with the exact string
+      `"unknown param modifier: :<name>"`.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "ParamSpec enum exported with Literal and Embed variants"
+      - "parse_param('age=30') returns ParamSpec::Literal(Number(30))"
+      - "parse_param('v:embed=hello') returns ParamSpec::Embed(\"hello\")"
+      - "parse_param('v:foo=x') errors with 'unknown param modifier: :foo'"
+      - "parse_param('expr=a=b') preserves value with embedded '='"
+      - "parse_param('url=http://x') does NOT treat 'http' as a modifier (only key-side ':' splits)"
+    completed_at: null
+
+  - id: task-004
+    title: "Implement EmbedProvider trait, EmbedError, EmbedCliArgs, EmbedConfig"
+    description: |
+      In `src/embed/mod.rs`, define the async `EmbedProvider` trait
+      (`embed`, `model`, `dimensions`), `EmbedError` via `thiserror`,
+      `EmbedCliArgs` (clap `Args` with `--embed-provider`, `--embed-model`,
+      `--embed-dimensions`, `--embed-base-url`, each backed by its
+      `NEO4J_EMBED_*` env var), and `EmbedConfig::from_sources` + `build`
+      factory. Implement `resolve_api_key` with `OPENAI_API_KEY` →
+      `NEO4J_EMBED_API_KEY` fallback for OpenAI; Ollama gets None.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "EmbedProvider trait is Send + Sync and async via async-trait"
+      - "EmbedError has MissingApiKey, NotConfigured, UnknownProvider, Http, ProviderError variants"
+      - "EmbedCliArgs flags use clap env attribute for NEO4J_EMBED_* vars"
+      - "EmbedConfig::from_sources returns Ok(None) when no provider set"
+      - "EmbedConfig::from_sources returns Err when provider set but model missing"
+      - "CLI flag overrides env var in from_sources precedence tests"
+    completed_at: null
+
+  - id: task-005
+    title: "Implement OpenAI embedding provider"
+    description: |
+      In `src/embed/openai.rs`, implement the OpenAI provider: POST
+      `{base_url}/embeddings` with bearer auth, JSON body
+      `{input, model, dimensions?}`. Default base URL
+      `https://api.openai.com/v1`. Missing API key on construction returns
+      `EmbedError::MissingApiKey { provider: "openai", env_var:
+      "OPENAI_API_KEY" }`. Non-2xx response returns
+      `EmbedError::ProviderError` with status + body.
+    status: pending
+    dependencies:
+      - task-004
+    acceptance_criteria:
+      - "OpenAI::new returns MissingApiKey error when api_key is None"
+      - "embed() sends correct JSON shape with optional dimensions"
+      - "Non-success status produces ProviderError with status and body"
+      - "Empty data array produces ProviderError(\"empty response\")"
+      - "model() and dimensions() accessors work"
+    completed_at: null
+
+  - id: task-006
+    title: "Implement Ollama embedding provider"
+    description: |
+      In `src/embed/ollama.rs`, implement the Ollama provider: POST
+      `{base_url}/api/embed` (plural shape) with body `{model, input}`.
+      Default base URL `http://localhost:11434`. No API key sent; if
+      `NEO4J_EMBED_API_KEY` is set in env, silently ignore it.
+      Connection-refused → error mentions `ollama serve` is not running.
+      HTTP 404 → error mentions `ollama pull <model>`.
+    status: pending
+    dependencies:
+      - task-004
+    acceptance_criteria:
+      - "POST hits /api/embed (plural), not /api/embeddings"
+      - "Request body shape is {model, input}"
+      - "Connection error produces 'ollama unreachable at <url> (...). is `ollama serve` running?'"
+      - "HTTP 404 produces 'model '<m>' not found. run: ollama pull <m>'"
+      - "No Authorization header sent even if NEO4J_EMBED_API_KEY is set"
+    completed_at: null
+
+  - id: task-007
+    title: "Implement `embed` subcommand with json and raw output formats"
+    description: |
+      In `src/commands/embed.rs`, add `EmbedCmd` (clap `Args`) with optional
+      positional `text`, `#[command(flatten)] embed_args: EmbedCliArgs`, and
+      `--format` defaulting to `json`. Supported formats: `json` (single-line
+      JSON array) and `raw` (newline-separated floats). Intentionally no
+      `toon` format. Stdin fallback when `text` is omitted (trimmed). Wire
+      subcommand into the clap `Commands` enum in `src/main.rs`.
+    status: pending
+    dependencies:
+      - task-005
+      - task-006
+    acceptance_criteria:
+      - "`neo4j-query embed 'hello'` prints a JSON array on stdout"
+      - "`--format raw` prints one float per line"
+      - "Omitted positional reads stdin and trims"
+      - "`--format toon` errors (not supported)"
+      - "Uses same EmbedConfig::from_sources as query-mode path"
+      - "NotConfigured error surfaces when no provider configured"
+    completed_at: null
+
+  - id: task-008
+    title: "Wire :embed resolution into query mode with lazy provider init"
+    description: |
+      Add `EmbedCliArgs` to `QueryArgs` via `#[command(flatten)]`. Add
+      `resolve_params(specs, embed_args)` that builds params from
+      `ParamSpec`s, initialising the embed provider only when at least one
+      `ParamSpec::Embed` exists. Replace the `parse_params(&qa.p)?` call in
+      `run_query_mode` with the new path. Keep retry logic unchanged.
+    status: pending
+    dependencies:
+      - task-003
+      - task-005
+      - task-006
+    acceptance_criteria:
+      - "-P v:embed='text' in query mode produces a Vec<f32> param"
+      - "Un-modified params still type-coerce (int/bool/null/float/string)"
+      - "No embed provider instantiated when no :embed params are present"
+      - "NotConfigured error fires when :embed used without NEO4J_EMBED_PROVIDER"
+      - "Query retry behavior unchanged for non-embed paths"
+    completed_at: null
+
+  - id: task-009
+    title: "Unit tests for param parser and embed config resolution"
+    description: |
+      Extend `tests/unit.rs` with re-implemented helpers (per existing
+      pattern) and tests for: `parse_param` literal/embed/unknown-modifier/
+      value-with-equals/value-with-url-colon/empty-value cases; preserved
+      type coercion for un-modified params; `EmbedConfig::from_sources`
+      None/Err/precedence/API-key-fallback cases; exact error message
+      strings from REQ-F-011.
+    status: pending
+    dependencies:
+      - task-003
+      - task-004
+    acceptance_criteria:
+      - "All new parser tests pass"
+      - "Existing parse_param_value_* tests still pass verbatim"
+      - "Tests assert exact REQ-F-011 error strings via format!(\"{err}\") equality"
+      - "EmbedConfig precedence test proves CLI > env"
+      - "API key fallback test: OPENAI_API_KEY wins, then NEO4J_EMBED_API_KEY for openai"
+    completed_at: null
+
+  - id: task-010
+    title: "Add Ollama service to docker-compose and CI workflow"
+    description: |
+      Add an `ollama` service (pinned image tag) to
+      `tests/docker-compose.yml`. Add a setup script or make target that
+      runs `ollama pull all-minilm` against the container. Update the
+      GitHub Actions workflow to start Ollama, run the pull, then execute
+      `cargo test -- --ignored`. No Docker-volume caching in v1.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "docker-compose.yml has ollama service with pinned image tag"
+      - "Setup step pulls all-minilm into the container"
+      - "CI workflow runs Ollama + Neo4j together before --ignored tests"
+      - "Local run: `docker compose -f tests/docker-compose.yml up -d` followed by pull step works"
+      - "No actions/cache used for Ollama volumes in v1"
+    completed_at: null
+
+  - id: task-011
+    title: "Integration tests against real Ollama"
+    description: |
+      Add an `ollama_available()` helper in `tests/integration.rs` paralleling
+      `neo4j_available()`. Add `#[ignore]` tests covering: `embed 'hello'`
+      JSON output, `echo 'hello' | embed` stdin, `embed --format raw` +
+      `wc -l` equals 384 (all-minilm dims), `-P v:embed='hello' 'RETURN $v'`
+      round-trip, mixed literal-and-embed params preserving literal types.
+    status: pending
+    dependencies:
+      - task-007
+      - task-008
+      - task-010
+    acceptance_criteria:
+      - "ollama_available() helper present; tests skip gracefully when false"
+      - "Embed subcommand produces valid JSON array of 384 floats"
+      - "Raw format produces 384 newline-separated floats"
+      - "Stdin embed works end-to-end"
+      - "$v:embed param round-trips through Neo4j and appears in output"
+      - "Mixed -P x=42 -P v:embed='hi' keeps x as integer"
+    completed_at: null
+
+  - id: task-012
+    title: "Integration tests for error paths without Ollama"
+    description: |
+      Add non-`#[ignore]` integration tests asserting stderr contains the
+      exact REQ-F-011 error strings for: `:embed` used without
+      `NEO4J_EMBED_PROVIDER`, unknown modifier, OpenAI without API key,
+      unknown provider name. Use `cmd_no_neo4j()` style helpers to avoid
+      requiring a running DB.
+    status: pending
+    dependencies:
+      - task-007
+      - task-008
+    acceptance_criteria:
+      - "Missing provider error test passes without Neo4j or Ollama"
+      - "Unknown modifier test asserts exact 'unknown param modifier: :foo'"
+      - "OpenAI missing-key test asserts 'missing API key for openai: set OPENAI_API_KEY'"
+      - "Unknown provider test asserts 'unknown provider: <name>'"
+      - "All four tests run as part of default `cargo test`"
+    completed_at: null
+
+  - id: task-013
+    title: "Update README.md with Embeddings section and config table"
+    description: |
+      Add a new "Embeddings" section to README.md covering the `:embed`
+      modifier, the `embed` subcommand, and setup for both OpenAI and
+      Ollama. Include the motivating `CALL db.index.vector.queryNodes`
+      example. Extend the Configuration table with the new env vars /
+      flags (`NEO4J_EMBED_PROVIDER`, `NEO4J_EMBED_MODEL`,
+      `NEO4J_EMBED_DIMENSIONS`, `NEO4J_EMBED_BASE_URL`, `OPENAI_API_KEY`,
+      `NEO4J_EMBED_API_KEY`).
+    status: pending
+    dependencies:
+      - task-007
+      - task-008
+    acceptance_criteria:
+      - "Embeddings section present with :embed and subcommand examples"
+      - "OpenAI and Ollama .env examples included"
+      - "Configuration table includes all new env vars and flags"
+      - "Vector search example uses db.index.vector.queryNodes"
+      - "README markdown renders cleanly"
+    completed_at: null
+
+  - id: task-014
+    title: "Update both SKILL.md copies in sync"
+    description: |
+      Update `skills/neo4j-query/SKILL.md` AND
+      `.claude/skills/neo4j-query/SKILL.md` with a "Vector search /
+      embeddings" section explaining when to use `-P name:embed=...`,
+      noting that the feature is opt-in (provider required), and
+      showing an Ollama example. Both files must be byte-identical per
+      the AGENTS.md sync rule.
+    status: pending
+    dependencies:
+      - task-007
+      - task-008
+    acceptance_criteria:
+      - "Both SKILL.md files have the new embeddings section"
+      - "`diff skills/neo4j-query/SKILL.md .claude/skills/neo4j-query/SKILL.md` produces no output"
+      - "Section mentions the feature is opt-in and requires provider config"
+      - "Ollama example present"
+      - "Mentions -P name:embed=... syntax explicitly"
+    completed_at: null
