@@ -135,3 +135,31 @@ Key Decisions:
   const used by Ollama live tests.
 
 Next Task: task-006
+
+================================================================================
+TASK-006: Update README with HuggingFace provider docs and clip caveat
+Date: 2026-04-20T11:00:00Z
+================================================================================
+
+Summary:
+Added huggingface to the provider list in the Embeddings intro. New "Setup:
+HuggingFace (hosted)" subsection with .env recipe
+(clip-ViT-B-32-multilingual-v1 + HF_TOKEN) and the clip-ViT-B-32 caveat
+documenting both workarounds (multilingual variant OR dedicated endpoint via
+NEO4J_EMBED_BASE_URL). Added HF_TOKEN row to the Configuration table and
+broadened the NEO4J_EMBED_API_KEY default text to cover both OPENAI_API_KEY
+and HF_TOKEN. cargo build clean.
+
+Files Changed:
+- README.md (intro provider list, new HF subsection, config table row)
+
+Key Decisions:
+- Put the clip caveat inside the HF subsection (not a separate callout) so the
+  workarounds live next to the .env example that triggered the question.
+- Explicitly called out that --embed-dimensions is accepted-but-ignored for HF
+  to pre-empt confused bug reports.
+- Did NOT add --embed-base-url to the caveat's .env block (kept to just
+  NEO4J_EMBED_BASE_URL since users copy .env snippets; the flag form is already
+  in the Configuration table).
+
+Next Task: task-007

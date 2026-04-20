@@ -128,7 +128,7 @@ tasks:
       switch to the multilingual variant OR deploy a dedicated HF
       Inference Endpoint and override `--embed-base-url`. Add `HF_TOKEN`
       row to the Configuration table.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -137,7 +137,7 @@ tasks:
       - "clip-ViT-B-32 caveat documented with both workarounds"
       - "Configuration table includes HF_TOKEN row (no flag, required-for-hf default)"
       - "README markdown renders cleanly"
-    completed_at: null
+    completed_at: 2026-04-20T11:00:00Z
 
   - id: task-007
     title: "Update both SKILL.md copies in sync with HuggingFace mention"
