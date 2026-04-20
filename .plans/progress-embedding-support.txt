@@ -310,3 +310,43 @@ Key Decisions:
   project name = parent dir `tests`) with OLLAMA_CONTAINER override.
 
 Next Task: task-011
+
+================================================================================
+TASK-011: Integration tests against real Ollama
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added ollama_available() helper (mirrors neo4j_available()) plus two builder
+helpers embed_cmd() and cmd_with_embed() that set NEO4J_EMBED_PROVIDER=ollama,
+NEO4J_EMBED_MODEL=all-minilm, NEO4J_EMBED_BASE_URL (overridable via
+OLLAMA_TEST_URL). Added 5 #[ignore] integration tests: embed subcommand JSON
+output, stdin input, raw-format 384-line count, -P v:embed=... round-trip
+through Neo4j (asserts size($v)=384), and mixed literal+embed params
+preserving integer type on the literal side. Verified locally by bringing up
+docker-compose stack + ollama pull all-minilm + cargo test --ignored embed:
+5 passed.
+
+Files Changed:
+- tests/integration.rs (+ollama_available + embed_cmd + cmd_with_embed + 5 tests)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- OLLAMA_TEST_URL env override mirrors NEO4J_TEST_URI convention — lets CI
+  point at a different host if the service port isn't localhost.
+- ALL_MINILM_DIMS = 384 kept as a single named constant so the dimension
+  assertion is explicit and shared across all 5 tests.
+- Round-trip test uses `RETURN size($v) AS n` rather than returning the
+  vector itself: Neo4j's HTTP response would dump 384 floats into stdout,
+  making assertion brittle on float formatting. size() proves the vector
+  made it through intact and is the shape the user actually cares about.
+- is_i64() assertion in the mixed-params test is the real teeth of the
+  "literal types preserved" acceptance criterion — a string "42" would
+  also equal 42 under serde_json's loose comparison, so the type check
+  is what distinguishes literal-path behaviour from a regression.
+- Skip messages printed via eprintln! when ollama/neo4j unavailable so
+  `cargo test -- --ignored` in an incomplete env degrades gracefully
+  instead of misleadingly failing.
+
+Next Task: task-012

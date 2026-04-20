@@ -217,7 +217,7 @@ tasks:
       JSON output, `echo 'hello' | embed` stdin, `embed --format raw` +
       `wc -l` equals 384 (all-minilm dims), `-P v:embed='hello' 'RETURN $v'`
       round-trip, mixed literal-and-embed params preserving literal types.
-    status: pending
+    status: completed
     dependencies:
       - task-007
       - task-008
@@ -229,7 +229,7 @@ tasks:
       - "Stdin embed works end-to-end"
       - "$v:embed param round-trips through Neo4j and appears in output"
       - "Mixed -P x=42 -P v:embed='hi' keeps x as integer"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-012
     title: "Integration tests for error paths without Ollama"
