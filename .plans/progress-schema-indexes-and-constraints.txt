@@ -1,0 +1,100 @@
+================================================================================
+TASK-001: Add SHOW INDEXES query + indexes array to run_schema
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended run_schema in src/main.rs w/ 4th step issuing SHOW INDEXES via
+existing run_cypher. Each row mapped to JSON object (name/type/entityType/
+labelsOrTypes/properties/state/owningConstraint/options) via new
+insert_if_present helper that elides null/empty-string/empty-array/empty-object
+fields. Array sorted by name ascending, attached under `indexes` key sibling
+to nodes/relationships. No filtering (system/LOOKUP included).
+
+Files Changed:
+- src/main.rs (modified: added SHOW INDEXES block + insert_if_present helper)
+- .plans/tasks-schema-indexes-and-constraints.yml (task-001 marked completed)
+
+Key Decisions:
+- Added reusable insert_if_present helper (task-002 will reuse for constraints)
+- options passed through as opaque Value so vector/fulltext config surfaces
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Add SHOW CONSTRAINTS query + constraints array to run_schema
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended run_schema in src/main.rs w/ 5th step issuing SHOW CONSTRAINTS via
+existing run_cypher. Each row mapped to JSON object (name/type/entityType/
+labelsOrTypes/properties/ownedIndex/propertyType) via insert_if_present helper
+(reused from task-001) for null/empty field elision. Array sorted by name
+ascending, attached under `constraints` key sibling to nodes/relationships/
+indexes. Constraint type passes through unchanged.
+
+Files Changed:
+- src/main.rs (modified: added SHOW CONSTRAINTS block after indexes block)
+
+Key Decisions:
+- Reused insert_if_present helper from task-001 (same elision pattern)
+- Same sort-by-name-asc pattern as indexes
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Update schema_command integration test to cover indexes & constraints
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended schema_command #[ignore] test in tests/integration.rs. Seeds
+schema_test_unique uniqueness constraint + schema_test_z_idx range index
+before invoking `schema`, adds stdout substring assertions for indexes,
+constraints, schema_test_unique, schema_test_z_idx, RANGE, UNIQUE.
+Cleanup drops constraint and index via IF EXISTS before the existing
+node DETACH DELETEs. Test remains #[ignore]-gated.
+
+Files Changed:
+- tests/integration.rs (modified: seed/assert/cleanup for idx+constraint)
+
+Key Decisions:
+- "UNIQUE" substring hits constraint type "UNIQUENESS" returned by Neo4j
+- Drops run before node deletes to avoid constraint interference
+
+Feedback Loops:
+- cargo build: ok
+- cargo test (non-ignored): 75 passed
+- cargo clippy: clean
+- cargo fmt --check: clean
+- cargo test -- --ignored schema_command: SKIPPED (local Neo4j on :7474 unreachable)
+
+Next Task: task-004
+
+================================================================================
+TASK-004: Document indexes & constraints in README and SKILL.md copies
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Docs-only. README.md schema row (~line 211) now mentions `indexes` and
+`constraints` appended to description. Both SKILL.md copies (skills/... +
+.claude/skills/...) extended bullet list under "schema subcommand returns..."
+with indexes (name/type/entityType/labelsOrTypes/properties/state/
+owningConstraint/options) and constraints (name/type/entityType/
+labelsOrTypes/properties/ownedIndex/propertyType) entries.
+
+Files Changed:
+- README.md (modified: schema row updated)
+- skills/neo4j-query/SKILL.md (modified: 2 bullets added)
+- .claude/skills/neo4j-query/SKILL.md (modified: 2 bullets added)
+
+Key Decisions:
+- Field lists mirror run_schema emit order so agents know what to expect
+- Kept wording style consistent w/ existing nodes/relationships bullets
+
+Feedback Loops:
+- cargo build: ok (SKILL.md embed intact)
+
+Next Task: All tasks complete
