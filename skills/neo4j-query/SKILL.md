@@ -33,10 +33,13 @@ neo4j-query schema
 ```
 
 The `schema` subcommand returns a structured TOON object with:
+- **database**: `neo4jVersion` (e.g. `5.26.0`), `edition` (`community`/`enterprise`), `defaultCypherVersion` (`5` or `25`)
 - **nodes**: every node label with its properties (name, type, mandatory flag)
 - **relationships**: every relationship type with its properties AND `paths` showing which node labels it connects (from → to)
 - **indexes**: every index (name, type, entityType, labelsOrTypes, properties, state, owningConstraint, options)
 - **constraints**: every constraint (name, type, entityType, labelsOrTypes, properties, ownedIndex, propertyType)
+
+`defaultCypherVersion` tells you which Cypher dialect the server defaults to — use it to pick version-specific syntax (e.g. vector-index DDL differs between Cypher 5 and Cypher 25).
 
 Example output:
 ```

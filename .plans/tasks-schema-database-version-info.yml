@@ -1,0 +1,51 @@
+feature: schema-database-version-info
+prd: ./prd-schema-database-version-info.md
+created_at: 2026-04-20T00:00:00Z
+updated_at: 2026-04-20T00:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Emit database block (neo4jVersion, edition, defaultCypherVersion) in run_schema"
+    description: |
+      Extend `run_schema` in src/main.rs to issue two additional Cypher calls via the existing `run_cypher` helper: (1) `CALL dbms.components() YIELD name, versions, edition RETURN name, versions, edition` to source `neo4jVersion` (first element of `versions`) and `edition`; (2) `SHOW SETTINGS YIELD name, value WHERE name = 'db.query.default_language_version' RETURN value` to source `defaultCypherVersion`. If the settings query errors or returns zero rows (Neo4j 5.x), fall back to `"5"`. Errors from either query must not abort `schema` — swallow and emit partial data. Coerce `defaultCypherVersion` to a string regardless of server return type (int or string). Reuse the existing `insert_if_present` helper to elide null/empty fields. Attach the result as a top-level `database` key in the returned JSON, placed first so it appears before `nodes`/`relationships`/`indexes`/`constraints` in the TOON tree.
+    status: completed
+    dependencies: []
+    acceptance_criteria:
+      - "run_schema issues CALL dbms.components() and SHOW SETTINGS via run_cypher"
+      - "database block contains neo4jVersion, edition, defaultCypherVersion when all queries succeed"
+      - "defaultCypherVersion falls back to '5' when the setting query errors or returns zero rows"
+      - "dbms.components() errors do not abort schema — partial data is still emitted"
+      - "defaultCypherVersion is always a string in the emitted JSON"
+      - "database key appears first in the returned schema JSON"
+      - "Null/empty fields are elided via insert_if_present"
+    completed_at: 2026-04-20T00:00:00Z
+
+  - id: task-002
+    title: "Extend schema_command integration test to assert database block"
+    description: |
+      Update `schema_command` in tests/integration.rs to additionally assert the TOON output contains the substrings `database`, `neo4jVersion`, `edition`, and `defaultCypherVersion`. Remain content-agnostic on the actual values — they vary by DB. Keep the test `#[ignore]`-gated and use the existing `cmd()` helper. Integration test run requires a fresh Neo4j container per AGENTS.md convention.
+    status: completed
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Test asserts database, neo4jVersion, edition, defaultCypherVersion substrings in TOON output"
+      - "Assertions are content-agnostic about actual version/edition values"
+      - "Test remains #[ignore]-gated and live-Neo4j only"
+      - "cargo test -- --ignored schema_command passes against a fresh Neo4j 5 container"
+
+    completed_at: 2026-04-20T00:00:00Z
+
+  - id: task-003
+    title: "Document database block in README and both SKILL.md copies"
+    description: |
+      Update the README.md schema section to mention the new top-level `database` block (neo4jVersion, edition, defaultCypherVersion). Mirror the same note in both agent-facing copies: `skills/neo4j-query/SKILL.md` (compile-time embed source) and `.claude/skills/neo4j-query/SKILL.md` (developer copy). Call out that `defaultCypherVersion` tells the agent which vector-index syntax to use (Cypher 5 vs Cypher 25). Keep wording consistent across the three files.
+    status: completed
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "README.md schema section mentions the database block and its three fields"
+      - "skills/neo4j-query/SKILL.md mentions the database block and the Cypher version implication"
+      - ".claude/skills/neo4j-query/SKILL.md matches skills/neo4j-query/SKILL.md"
+      - "Wording is consistent across the three files"
+      - "cargo build remains clean (SKILL.md is compile-time embedded)"
+    completed_at: 2026-04-20T00:00:00Z

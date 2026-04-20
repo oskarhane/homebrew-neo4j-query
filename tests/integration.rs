@@ -339,8 +339,24 @@ fn schema_command() {
             .and(predicate::str::contains("schema_test_unique"))
             .and(predicate::str::contains("schema_test_z_idx"))
             .and(predicate::str::contains("RANGE"))
-            .and(predicate::str::contains("UNIQUE")),
+            .and(predicate::str::contains("UNIQUE"))
+            .and(predicate::str::contains("database"))
+            .and(predicate::str::contains("neo4jVersion"))
+            .and(predicate::str::contains("edition"))
+            .and(predicate::str::contains("defaultCypherVersion")),
     );
+
+    // In CI the matrix pins the expected value per job (5.x fallback, 2025 CYPHER_5,
+    // 2025 CYPHER_25). Locally the env var is unset — skip the exact-value check.
+    if let Ok(expected) = std::env::var("EXPECTED_CYPHER_DEFAULT") {
+        cmd()
+            .arg("schema")
+            .assert()
+            .success()
+            .stdout(predicate::str::contains(format!(
+                "defaultCypherVersion: \"{expected}\""
+            )));
+    }
 
     // cleanup
     cmd()

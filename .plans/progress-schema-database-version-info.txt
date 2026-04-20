@@ -1,0 +1,90 @@
+================================================================================
+TASK-001: Emit database block (neo4jVersion, edition, defaultCypherVersion) in run_schema
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended run_schema in src/main.rs w/ 2 extra run_cypher calls. (1)
+`CALL dbms.components()` -> neo4jVersion (first of versions[]) + edition.
+(2) `SHOW SETTINGS WHERE name = 'db.query.default_language_version'` ->
+defaultCypherVersion, coerced to String, fallback "5" on Err or zero rows
+(Neo4j 5.x). Errors from either query swallowed — schema still emits partial
+data. Final JSON built via explicit Map::insert in order (database first,
+then nodes/relationships/indexes/constraints) — preserve_order is enabled
+transitively via toon-format so insertion order is kept in TOON output.
+
+Files Changed:
+- src/main.rs (modified: added step 6 + restructured final Ok to ordered Map)
+- .plans/tasks-schema-database-version-info.yml (task-001 marked completed)
+
+Key Decisions:
+- Reused insert_if_present for neo4jVersion/edition to elide nulls/empties.
+- defaultCypherVersion unconditionally inserted (always a String per REQ-F-006).
+- `database` map only attached if non-empty — matches PRD wording.
+- Confirmed serde_json `preserve_order` active via toon-format dep (cargo tree).
+
+Feedback:
+- cargo build: clean
+- cargo test: 75 passed, 0 failed
+- cargo clippy: clean
+- cargo fmt --check: clean
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Extend schema_command integration test to assert database block
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added 4 substring assertions to schema_command in tests/integration.rs:
+`database`, `neo4jVersion`, `edition`, `defaultCypherVersion`. Content-
+agnostic (no value matching — varies by DB). Test still #[ignore]-gated
+and uses existing cmd() helper.
+
+Files Changed:
+- tests/integration.rs (modified: schema_command test extended w/ 4 .and()
+  predicates)
+- .plans/tasks-schema-database-version-info.yml (task-002 -> completed)
+
+Key Decisions:
+- Appended to existing predicate chain — same style as surrounding asserts.
+- No new test fn; extending coverage on the happy path is enough per PRD.
+
+Feedback:
+- cargo build: clean
+- cargo test: 75 passed, 0 failed
+- cargo clippy: clean
+- cargo fmt --check: clean
+- cargo test -- --ignored schema_command: 1 passed (fresh neo4j:5 container)
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Document database block in README and both SKILL.md copies
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Docs-only. README schema subcommand row updated + new "### `schema`
+database block" subsection added listing 3 fields (neo4jVersion, edition,
+defaultCypherVersion) + Cypher-dialect implication note. Both SKILL.md
+copies (skills/ + .claude/skills/) got matching `database` bullet + same
+Cypher-dialect note. Wording consistent across all 3 files.
+
+Files Changed:
+- README.md (schema row + new subsection)
+- skills/neo4j-query/SKILL.md (bullet + note)
+- .claude/skills/neo4j-query/SKILL.md (identical to above)
+- .plans/tasks-schema-database-version-info.yml (task-003 -> completed)
+
+Key Decisions:
+- PR #8's "Cypher 25 vs Cypher 5" subsection not on this branch — docs
+  stand alone, mention the implication w/o assuming that subsection.
+- SKILL.md copies byte-identical (same diff hunk applied to both).
+
+Feedback:
+- cargo build: clean
+- cargo fmt --check: clean
+
+Next Task: All tasks complete
