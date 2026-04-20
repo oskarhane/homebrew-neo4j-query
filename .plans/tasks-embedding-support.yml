@@ -115,7 +115,7 @@ tasks:
       `NEO4J_EMBED_API_KEY` is set in env, silently ignore it.
       Connection-refused → error mentions `ollama serve` is not running.
       HTTP 404 → error mentions `ollama pull <model>`.
-    status: pending
+    status: completed
     dependencies:
       - task-004
     acceptance_criteria:
@@ -124,7 +124,7 @@ tasks:
       - "Connection error produces 'ollama unreachable at <url> (...). is `ollama serve` running?'"
       - "HTTP 404 produces 'model '<m>' not found. run: ollama pull <m>'"
       - "No Authorization header sent even if NEO4J_EMBED_API_KEY is set"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-007
     title: "Implement `embed` subcommand with json and raw output formats"

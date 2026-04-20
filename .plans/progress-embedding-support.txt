@@ -132,3 +132,35 @@ Key Decisions:
 - dimensions only added to JSON body when Some; OpenAI errors if `null` sent.
 
 Next Task: task-006
+
+================================================================================
+TASK-006: Implement Ollama embedding provider
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Implemented Ollama provider in src/embed/ollama.rs. POSTs to
+{base_url}/api/embed (plural) with body {model, input}. Default base URL
+http://localhost:11434. No Authorization header ever sent. Connection/
+request/timeout errors map to ProviderError "ollama unreachable at <url>
+(<cause>). is `ollama serve` running?". HTTP 404 maps to "model '<m>' not
+found. run: ollama pull <m>". Other non-2xx -> "HTTP <status>: <body>".
+Empty embeddings array -> "empty response". Wired into EmbedConfig::build()
+replacing the ollama stub.
+
+Files Changed:
+- src/embed/ollama.rs (real impl)
+- src/embed/mod.rs (build() wires Ollama)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Bucketed is_connect/is_request/is_timeout into the "unreachable" message
+  rather than just is_connect — reqwest classifies pre-response failures
+  differently across platforms, and all three cases share the same user
+  remedy (start ollama serve).
+- Treated 404 specifically (before the generic non-2xx path) so the
+  actionable "ollama pull <model>" hint fires even when the body is empty.
+- Kept dimensions field plumbed through Ollama::new for trait symmetry even
+  though Ollama ignores it — matches REQ-F-010 (dimensions are OpenAI-only).
+
+Next Task: task-007

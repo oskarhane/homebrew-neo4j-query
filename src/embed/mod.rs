@@ -157,10 +157,10 @@ impl EmbedConfig {
                     openai::OpenAi::new(self.api_key, self.model, self.dimensions, self.base_url)?;
                 Ok(Box::new(provider))
             }
-            "ollama" => Err(EmbedError::ProviderError {
-                provider: "ollama",
-                message: "ollama provider not yet implemented".to_string(),
-            }),
+            "ollama" => {
+                let provider = ollama::Ollama::new(self.model, self.dimensions, self.base_url)?;
+                Ok(Box::new(provider))
+            }
             other => Err(EmbedError::UnknownProvider(other.to_string())),
         }
     }
