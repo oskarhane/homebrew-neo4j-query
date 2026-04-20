@@ -122,6 +122,15 @@ neo4j-query -P k=5 -P q:embed='sci-fi movies' \
    YIELD node, score RETURN node.title, score"
 ```
 
+### Cypher 25 vs Cypher 5 syntax
+
+Vector-index querying differs by Cypher version:
+
+- **Cypher 5** (Neo4j 5.x): `CALL db.index.vector.queryNodes('name', k, $q) YIELD node, score`
+- **Cypher 25** (Neo4j 2025.x+, preferred): `SEARCH n IN (VECTOR INDEX name FOR n.embedding LIMIT k) SCORE AS score`
+
+Cypher 25 also supports multi-label indexes (`FOR (n:Movie|Actor) ON n.embedding`) and filterable `WITH` properties. The `CALL db.index.vector.queryNodes` form still works in Cypher 25 but is deprecated. If unsure which version the DB supports, start with the Cypher 5 form — it works everywhere.
+
 Ollama example (local, free, no API key):
 
 ```bash
