@@ -4,6 +4,7 @@ mod params;
 mod skill;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use commands::embed::EmbedCmd;
 use params::parse_params;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
@@ -97,6 +98,8 @@ enum Commands {
         #[command(subcommand)]
         action: SkillAction,
     },
+    /// Generate an embedding vector for TEXT (debug helper)
+    Embed(EmbedCmd),
 }
 
 #[derive(Subcommand)]
@@ -571,6 +574,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(())
             }
         },
+        Some(Commands::Embed(cmd)) => commands::embed::run(cmd).await,
         None => run_query_mode(cli.query_args).await,
     }
 }

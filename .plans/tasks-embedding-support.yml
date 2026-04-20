@@ -135,7 +135,7 @@ tasks:
       JSON array) and `raw` (newline-separated floats). Intentionally no
       `toon` format. Stdin fallback when `text` is omitted (trimmed). Wire
       subcommand into the clap `Commands` enum in `src/main.rs`.
-    status: pending
+    status: completed
     dependencies:
       - task-005
       - task-006
@@ -146,7 +146,7 @@ tasks:
       - "`--format toon` errors (not supported)"
       - "Uses same EmbedConfig::from_sources as query-mode path"
       - "NotConfigured error surfaces when no provider configured"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-008
     title: "Wire :embed resolution into query mode with lazy provider init"

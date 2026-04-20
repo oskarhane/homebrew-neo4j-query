@@ -164,3 +164,37 @@ Key Decisions:
   though Ollama ignores it — matches REQ-F-010 (dimensions are OpenAI-only).
 
 Next Task: task-007
+
+================================================================================
+TASK-007: Implement `embed` subcommand with json and raw output formats
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Filled out src/commands/embed.rs with EmbedCmd (clap Args) — optional TEXT
+positional, --format json|raw (default json), flattened EmbedCliArgs. EmbedFormat
+value-enum excludes toon so clap rejects it at parse time. run() resolves text
+(positional > stdin, trimmed, empty rejected), calls EmbedConfig::require for
+NotConfigured surfacing, builds provider, embeds, prints. Wired into Commands
+enum in main.rs. Removed #[allow(dead_code)] from commands/mod.rs now that the
+module is live.
+
+Files Changed:
+- src/commands/embed.rs (real impl: EmbedFormat, EmbedCmd, resolve_text, run)
+- src/commands/mod.rs (drop #[allow(dead_code)])
+- src/main.rs (add Commands::Embed variant + dispatch, import EmbedCmd)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Used EmbedConfig::require (not from_sources + match) in the subcommand path:
+  the user explicitly asked to embed, so "no provider" is always an error here,
+  and require is the one-liner that produces the exact REQ-F-011 string.
+- resolve_text trims both positional and stdin, and rejects empty-after-trim,
+  so providers never see a blank body (OpenAI 400s on empty input anyway).
+- Leaning on clap's ValueEnum for format rejection (toon) rather than hand-
+  parsing — the error message clap emits ("invalid value 'toon' for --format:
+  [possible values: json, raw]") is already clear.
+- println! for raw output uses default f32 Display; matches what `wc -l` will
+  count in the task-011 integration test.
+
+Next Task: task-008
