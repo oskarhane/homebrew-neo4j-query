@@ -30,3 +30,32 @@ Feedback:
 - cargo fmt --check: clean
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Extend schema_command integration test to assert database block
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added 4 substring assertions to schema_command in tests/integration.rs:
+`database`, `neo4jVersion`, `edition`, `defaultCypherVersion`. Content-
+agnostic (no value matching — varies by DB). Test still #[ignore]-gated
+and uses existing cmd() helper.
+
+Files Changed:
+- tests/integration.rs (modified: schema_command test extended w/ 4 .and()
+  predicates)
+- .plans/tasks-schema-database-version-info.yml (task-002 -> completed)
+
+Key Decisions:
+- Appended to existing predicate chain — same style as surrounding asserts.
+- No new test fn; extending coverage on the happy path is enough per PRD.
+
+Feedback:
+- cargo build: clean
+- cargo test: 75 passed, 0 failed
+- cargo clippy: clean
+- cargo fmt --check: clean
+- cargo test -- --ignored schema_command: 1 passed (fresh neo4j:5 container)
+
+Next Task: task-003

@@ -24,7 +24,7 @@ tasks:
     title: "Extend schema_command integration test to assert database block"
     description: |
       Update `schema_command` in tests/integration.rs to additionally assert the TOON output contains the substrings `database`, `neo4jVersion`, `edition`, and `defaultCypherVersion`. Remain content-agnostic on the actual values — they vary by DB. Keep the test `#[ignore]`-gated and use the existing `cmd()` helper. Integration test run requires a fresh Neo4j container per AGENTS.md convention.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -33,7 +33,7 @@ tasks:
       - "Test remains #[ignore]-gated and live-Neo4j only"
       - "cargo test -- --ignored schema_command passes against a fresh Neo4j 5 container"
 
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-003
     title: "Document database block in README and both SKILL.md copies"

@@ -339,7 +339,11 @@ fn schema_command() {
             .and(predicate::str::contains("schema_test_unique"))
             .and(predicate::str::contains("schema_test_z_idx"))
             .and(predicate::str::contains("RANGE"))
-            .and(predicate::str::contains("UNIQUE")),
+            .and(predicate::str::contains("UNIQUE"))
+            .and(predicate::str::contains("database"))
+            .and(predicate::str::contains("neo4jVersion"))
+            .and(predicate::str::contains("edition"))
+            .and(predicate::str::contains("defaultCypherVersion")),
     );
 
     // cleanup
