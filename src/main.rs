@@ -493,12 +493,69 @@ async fn run_schema(
         an.cmp(bn)
     });
 
-    Ok(json!({
-        "nodes": node_list,
-        "relationships": relationships,
-        "indexes": indexes,
-        "constraints": constraints,
-    }))
+    // 6. Database version info (neo4jVersion, edition, defaultCypherVersion).
+    // Errors here must NOT abort schema — swallow and emit partial data.
+    let mut database = Map::new();
+
+    // CALL dbms.components() — neo4jVersion + edition
+    if let Ok(rows) = run_cypher(
+        client,
+        url,
+        user,
+        password,
+        "CALL dbms.components() YIELD name, versions, edition \
+         RETURN name, versions, edition",
+    )
+    .await
+    {
+        if let Some(row) = rows.first() {
+            if let Some(versions) = row.get("versions").and_then(|v| v.as_array()) {
+                if let Some(first) = versions.first() {
+                    insert_if_present(&mut database, "neo4jVersion", Some(first));
+                }
+            }
+            insert_if_present(&mut database, "edition", row.get("edition"));
+        }
+    }
+
+    // SHOW SETTINGS — defaultCypherVersion. Fall back to "5" on error or zero rows.
+    let default_cypher_version = match run_cypher(
+        client,
+        url,
+        user,
+        password,
+        "SHOW SETTINGS YIELD name, value \
+         WHERE name = 'db.query.default_language_version' \
+         RETURN value",
+    )
+    .await
+    {
+        Ok(rows) => rows
+            .first()
+            .and_then(|row| row.get("value"))
+            .and_then(|v| match v {
+                Value::String(s) if !s.is_empty() => Some(s.clone()),
+                Value::Number(n) => Some(n.to_string()),
+                _ => None,
+            })
+            .unwrap_or_else(|| "5".to_string()),
+        Err(_) => "5".to_string(),
+    };
+    database.insert(
+        "defaultCypherVersion".to_string(),
+        Value::String(default_cypher_version),
+    );
+
+    // Build final output with `database` first so it's the first thing an agent sees in TOON.
+    let mut out = Map::new();
+    if !database.is_empty() {
+        out.insert("database".to_string(), Value::Object(database));
+    }
+    out.insert("nodes".to_string(), Value::Array(node_list));
+    out.insert("relationships".to_string(), Value::Array(relationships));
+    out.insert("indexes".to_string(), Value::Array(indexes));
+    out.insert("constraints".to_string(), Value::Array(constraints));
+    Ok(Value::Object(out))
 }
 
 /// Insert `value` into `map` under `key` unless it is null, an empty string, or an empty array.

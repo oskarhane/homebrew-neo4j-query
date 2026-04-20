@@ -8,7 +8,7 @@ tasks:
     title: "Emit database block (neo4jVersion, edition, defaultCypherVersion) in run_schema"
     description: |
       Extend `run_schema` in src/main.rs to issue two additional Cypher calls via the existing `run_cypher` helper: (1) `CALL dbms.components() YIELD name, versions, edition RETURN name, versions, edition` to source `neo4jVersion` (first element of `versions`) and `edition`; (2) `SHOW SETTINGS YIELD name, value WHERE name = 'db.query.default_language_version' RETURN value` to source `defaultCypherVersion`. If the settings query errors or returns zero rows (Neo4j 5.x), fall back to `"5"`. Errors from either query must not abort `schema` — swallow and emit partial data. Coerce `defaultCypherVersion` to a string regardless of server return type (int or string). Reuse the existing `insert_if_present` helper to elide null/empty fields. Attach the result as a top-level `database` key in the returned JSON, placed first so it appears before `nodes`/`relationships`/`indexes`/`constraints` in the TOON tree.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "run_schema issues CALL dbms.components() and SHOW SETTINGS via run_cypher"
@@ -18,7 +18,7 @@ tasks:
       - "defaultCypherVersion is always a string in the emitted JSON"
       - "database key appears first in the returned schema JSON"
       - "Null/empty fields are elided via insert_if_present"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-002
     title: "Extend schema_command integration test to assert database block"
