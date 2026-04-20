@@ -650,6 +650,9 @@ fn resolve_api_key_fake(provider: &str, env: &dyn Fn(&str) -> Option<String>) ->
             .and_then(filter_empty)
             .or_else(|| env("NEO4J_EMBED_API_KEY").and_then(filter_empty)),
         "ollama" => None,
+        "huggingface" => env("HF_TOKEN")
+            .and_then(filter_empty)
+            .or_else(|| env("NEO4J_EMBED_API_KEY").and_then(filter_empty)),
         _ => env("NEO4J_EMBED_API_KEY").and_then(filter_empty),
     }
 }
@@ -889,4 +892,43 @@ fn from_sources_openai_prefers_openai_env() {
     };
     let cfg = from_sources_fake(&args, &env).unwrap().unwrap();
     assert_eq!(cfg.api_key, Some("sk-openai".into()));
+}
+
+// --- huggingface resolve_api_key arm (REQ-T-001) ---
+
+#[test]
+fn resolve_api_key_huggingface_hf_token_wins() {
+    let env = |k: &str| match k {
+        "HF_TOKEN" => Some("tok".into()),
+        _ => None,
+    };
+    assert_eq!(
+        resolve_api_key_fake("huggingface", &env),
+        Some("tok".into())
+    );
+}
+
+#[test]
+fn resolve_api_key_huggingface_falls_back_to_embed_key() {
+    let env = |k: &str| match k {
+        "NEO4J_EMBED_API_KEY" => Some("fb".into()),
+        _ => None,
+    };
+    assert_eq!(resolve_api_key_fake("huggingface", &env), Some("fb".into()));
+}
+
+#[test]
+fn resolve_api_key_huggingface_neither_set_none() {
+    assert_eq!(resolve_api_key_fake("huggingface", &empty_env), None);
+}
+
+#[test]
+fn resolve_api_key_huggingface_empty_hf_token_falls_back() {
+    // Empty HF_TOKEN treated as unset (mirrors openai empty-filter).
+    let env = |k: &str| match k {
+        "HF_TOKEN" => Some(String::new()),
+        "NEO4J_EMBED_API_KEY" => Some("fb".into()),
+        _ => None,
+    };
+    assert_eq!(resolve_api_key_fake("huggingface", &env), Some("fb".into()));
 }

@@ -1,0 +1,189 @@
+================================================================================
+TASK-001: Implement HuggingFace provider in src/embed/huggingface.rs
+Date: 2026-04-20T09:53:32Z
+================================================================================
+
+Summary:
+Created new src/embed/huggingface.rs implementing EmbedProvider. Modeled on
+ollama.rs structure + openai.rs bearer_auth. Handles dedicated-vs-serverless
+routing via base_url: Option<String>. Parser accepts both nested [[f32]] and
+flat [f32] response shapes via serde_json::Value branching. Error strings
+prefixed with "huggingface" per the ollama pattern so Display yields
+substring-matchable output.
+
+Files Changed:
+- src/embed/huggingface.rs (new)
+
+Key Decisions:
+- Empty-string base_url treated as None (dotenv stub-line ergonomics, matches
+  openai/ollama pattern).
+- Error messages prefix "huggingface" inside ProviderError.message so
+  integration tests can assert contains("huggingface auth failed") despite the
+  EmbedError Display format wrapping as "{provider} error: {message}".
+- 6 in-file unit tests (#[cfg(test)] mod tests) cover parse_embedding shapes,
+  request_url routing, and missing/empty key errors. No external mocking deps.
+- Compile verification deferred to task-002 which adds `pub mod huggingface;`
+  — task-001 writes the file only per PRD REQ-F-009 scope split.
+
+Next Task: task-002
+
+================================================================================
+TASK-002: Wire huggingface into EmbedConfig::build and resolve_api_key
+Date: 2026-04-20T10:05:00Z
+================================================================================
+
+Summary:
+Registered new huggingface module via `pub mod huggingface;` in src/embed/mod.rs.
+Added "huggingface" arm to EmbedConfig::build calling HuggingFace::new with
+(api_key, model, dimensions, base_url) — 4-arg signature from task-001 (task
+description listed 3 args but task-001 impl includes `dimensions` for trait
+symmetry; dimensions is accepted-but-ignored per REQ-F-007). Added "huggingface"
+arm to resolve_api_key mirroring openai's empty-filtered OPENAI_API_KEY →
+NEO4J_EMBED_API_KEY pattern: HF_TOKEN → NEO4J_EMBED_API_KEY. Updated doc-comments
+on EmbedCliArgs.provider and resolve_api_key to reference huggingface. Also
+added #[derive(Debug)] to HuggingFace struct (task-001 tests use .unwrap_err()
+which requires T: Debug — surfaced when clippy --all-targets compiled tests).
+
+Files Changed:
+- src/embed/mod.rs (module decl, build arm, resolve_api_key arm, doc-comments)
+- src/embed/huggingface.rs (added #[derive(Debug)] — test compile fix from 001)
+
+Key Decisions:
+- HuggingFace::new called with 4 args not 3: matches task-001 signature; PRD
+  REQ-F-007 says dimensions is CLI-accepted but provider-ignored, kept in
+  signature for trait symmetry.
+- Skipped cargo fmt on src/main.rs (pre-existing fmt drift, out of task scope).
+  Let cargo fmt apply to src/embed/mod.rs only since the task edits that file.
+- No tests added this task; unit tests live in task-003 (resolve_api_key) and
+  task-004 (integration).
+
+Next Task: task-003
+
+================================================================================
+TASK-003: Unit tests for resolve_api_key huggingface arm
+Date: 2026-04-20T10:15:00Z
+================================================================================
+
+Summary:
+Added huggingface arm to tests/unit.rs `resolve_api_key_fake` re-impl mirroring
+the openai pattern (HF_TOKEN -> NEO4J_EMBED_API_KEY, empty-string filter). Added
+4 REQ-T-001 tests using injected env closures -- no std::env::set_var. 75/75
+unit tests pass; clippy + fmt clean.
+
+Files Changed:
+- tests/unit.rs (resolve_api_key_fake huggingface arm + 4 tests)
+
+Key Decisions:
+- Reused the existing injected-closure pattern established by the openai tests
+  (resolve_api_key_openai_*). Parallelism-safe; no real env mutation.
+- Test names parallel the openai naming: hf_token_wins / falls_back_to_embed_key
+  / neither_set_none / empty_hf_token_falls_back.
+
+Next Task: task-004
+
+================================================================================
+TASK-004: Non-ignored integration tests for missing key + CLI flag positions
+Date: 2026-04-20T10:30:00Z
+================================================================================
+
+Summary:
+Extended embed_env_clean() to strip HF_TOKEN. Added two non-ignored integration
+tests: huggingface_missing_api_key_errors asserts exact REQ-F-008 missing-key
+string; huggingface_cli_flags_before_subcommand regresses the AGENTS.md
+global=true flag wiring by placing --embed-provider/--embed-model BEFORE the
+embed subcommand and verifying the same missing-key error fires. 30/30
+integration tests pass (up from 28). 75/75 unit tests still green. clippy +
+fmt clean.
+
+Files Changed:
+- tests/integration.rs (embed_env_clean HF_TOKEN strip + 2 new tests)
+
+Key Decisions:
+- Used the model sentinel "anything" for the flag-position test (never hits
+  network since missing-key short-circuits inside EmbedConfig::build).
+- Reused clip-ViT-B-32-multilingual-v1 as a realistic model name in the
+  missing-key test for doc value.
+- No external services touched by either test; both gated on the MissingApiKey
+  error path which fires before any HTTP is attempted.
+
+Next Task: task-005
+
+================================================================================
+TASK-005: Optional ignored integration test against real HF serverless
+Date: 2026-04-20T10:45:00Z
+================================================================================
+
+Summary:
+Added #[ignore] integration test huggingface_serverless_real_call. Gated on
+HF_TEST_TOKEN env (not plain HF_TOKEN) to prevent shell-exported tokens from
+triggering live paid requests accidentally. Skips with eprintln! when unset,
+mirroring neo4j_available/ollama_available. When set, runs --embed-provider
+huggingface --embed-model sentence-transformers/clip-ViT-B-32-multilingual-v1
+embed "hello" and asserts the JSON output is a 512-element Vec<f32>. Verified
+skip path works via `cargo test huggingface_serverless_real_call -- --ignored`.
+31/31 non-ignored integration + 75/75 unit still green. clippy + fmt clean.
+
+Files Changed:
+- tests/integration.rs (new const CLIP_MULTILINGUAL_DIMS + new #[ignore] test)
+
+Key Decisions:
+- HF_TEST_TOKEN gate (not HF_TOKEN) matches PRD REQ-T-005 intent and avoids
+  surprise charges for devs with shell-level HF_TOKEN set.
+- Reused embed_env_clean() then c.env("HF_TOKEN", token) to inject only the
+  test token into the subprocess env (embed_env_clean strips HF_TOKEN first).
+- Const CLIP_MULTILINGUAL_DIMS = 512 parallels the existing ALL_MINILM_DIMS
+  const used by Ollama live tests.
+
+Next Task: task-006
+
+================================================================================
+TASK-006: Update README with HuggingFace provider docs and clip caveat
+Date: 2026-04-20T11:00:00Z
+================================================================================
+
+Summary:
+Added huggingface to the provider list in the Embeddings intro. New "Setup:
+HuggingFace (hosted)" subsection with .env recipe
+(clip-ViT-B-32-multilingual-v1 + HF_TOKEN) and the clip-ViT-B-32 caveat
+documenting both workarounds (multilingual variant OR dedicated endpoint via
+NEO4J_EMBED_BASE_URL). Added HF_TOKEN row to the Configuration table and
+broadened the NEO4J_EMBED_API_KEY default text to cover both OPENAI_API_KEY
+and HF_TOKEN. cargo build clean.
+
+Files Changed:
+- README.md (intro provider list, new HF subsection, config table row)
+
+Key Decisions:
+- Put the clip caveat inside the HF subsection (not a separate callout) so the
+  workarounds live next to the .env example that triggered the question.
+- Explicitly called out that --embed-dimensions is accepted-but-ignored for HF
+  to pre-empt confused bug reports.
+- Did NOT add --embed-base-url to the caveat's .env block (kept to just
+  NEO4J_EMBED_BASE_URL since users copy .env snippets; the flag form is already
+  in the Configuration table).
+
+Next Task: task-007
+
+================================================================================
+TASK-007: Update both SKILL.md copies in sync with HuggingFace mention
+Date: 2026-04-20T11:15:00Z
+================================================================================
+
+Summary:
+Added "huggingface" to the NEO4J_EMBED_PROVIDER list in the Vector search /
+embeddings section of both SKILL.md copies. Single-line edit per file:
+"(`openai` or `ollama`)" -> "(`openai`, `ollama`, or `huggingface`)". Verified
+`diff skills/neo4j-query/SKILL.md .claude/skills/neo4j-query/SKILL.md` produces
+no output. cargo build clean (include_str! still compiles). Cargo.toml
+untouched.
+
+Files Changed:
+- skills/neo4j-query/SKILL.md (provider list)
+- .claude/skills/neo4j-query/SKILL.md (provider list)
+
+Key Decisions:
+- Minimal surface-area edit: only the provider enumeration line. Did NOT add a
+  HF-specific example block to SKILL.md since the token budget there is tight
+  and README already has the detailed recipe + clip caveat.
+
+Next Task: none (feature complete)

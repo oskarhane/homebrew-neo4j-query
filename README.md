@@ -79,7 +79,7 @@ neo4j-query --truncate-arrays-over 50 "MATCH (n) RETURN n LIMIT 5"
 
 ## Embeddings
 
-Generate embedding vectors inline for Neo4j vector search. Opt-in: set `NEO4J_EMBED_PROVIDER` to either `openai` or `ollama`. With no provider configured, the CLI behaves exactly as before and pays no embed cost.
+Generate embedding vectors inline for Neo4j vector search. Opt-in: set `NEO4J_EMBED_PROVIDER` to `openai`, `ollama`, or `huggingface`. With no provider configured, the CLI behaves exactly as before and pays no embed cost.
 
 ### `:embed` param modifier
 
@@ -151,6 +151,34 @@ EOF
 
 `OPENAI_API_KEY` is preferred; `NEO4J_EMBED_API_KEY` is used as a fallback.
 
+### Setup: HuggingFace (hosted)
+
+Uses HF's serverless Inference API by default. Requires an `HF_TOKEN` with the **Inference Providers** permission.
+
+```sh
+cat > .env <<'EOF'
+NEO4J_URI=http://localhost:7474
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password
+NEO4J_EMBED_PROVIDER=huggingface
+NEO4J_EMBED_MODEL=sentence-transformers/clip-ViT-B-32-multilingual-v1
+HF_TOKEN=hf_...
+EOF
+```
+
+`HF_TOKEN` is preferred; `NEO4J_EMBED_API_KEY` is used as a fallback. `--embed-dimensions` is accepted but silently ignored (HF feature-extraction endpoints don't support variable dims).
+
+**`clip-ViT-B-32` caveat**: the bare `sentence-transformers/clip-ViT-B-32` is **not** deployed on HF serverless. Two workarounds:
+
+1. **Switch to the multilingual variant** (recommended): `sentence-transformers/clip-ViT-B-32-multilingual-v1` — 512-dim, serverless-deployed.
+2. **Deploy a dedicated HF Inference Endpoint** for the bare model, then override the URL:
+
+   ```sh
+   NEO4J_EMBED_BASE_URL=https://<your-endpoint>.endpoints.huggingface.cloud
+   ```
+
+   When `--embed-base-url` (or `NEO4J_EMBED_BASE_URL`) is set, the CLI POSTs directly to that URL without appending `/{model}/pipeline/feature-extraction` — dedicated endpoints are model-locked.
+
 ## Configuration
 
 Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI flags > env vars > `.env` file.
@@ -169,7 +197,8 @@ Credentials via `.env` file, environment variables, or CLI flags. Priority: CLI 
 | `NEO4J_EMBED_DIMENSIONS` | `--embed-dimensions` | *(optional, OpenAI only)* |
 | `NEO4J_EMBED_BASE_URL` | `--embed-base-url` | provider default |
 | `OPENAI_API_KEY` | — | *(required for `openai`)* |
-| `NEO4J_EMBED_API_KEY` | — | fallback for `OPENAI_API_KEY` |
+| `HF_TOKEN` | — | *(required for `huggingface`)* |
+| `NEO4J_EMBED_API_KEY` | — | fallback for `OPENAI_API_KEY` / `HF_TOKEN` |
 
 The `--env` flag loads a specific `.env` file. Without it, the tool searches for a `.env` file starting from the current directory and walking up the directory tree.
 

@@ -1,0 +1,157 @@
+feature: huggingface-embed-provider
+prd: ./prd-huggingface-embed-provider.md
+created_at: 2026-04-20T00:00:00Z
+updated_at: 2026-04-20T00:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Implement HuggingFace provider in src/embed/huggingface.rs"
+    description: |
+      Create `src/embed/huggingface.rs` defining `HuggingFace { client,
+      api_key, model, base_url: Option<String> }` and implementing
+      `EmbedProvider`. Use `src/embed/ollama.rs` as the structural
+      template; use bearer auth like `src/embed/openai.rs:50`. POST
+      `{base}/{model}/pipeline/feature-extraction` when base_url is None
+      (default `https://router.huggingface.co/hf-inference/models`); POST
+      directly to `{base_url}` when overridden (dedicated endpoint). Body
+      `{"inputs": text}`. Response parser must accept BOTH `[[f32, ...]]`
+      (nested) and `[f32, ...]` (flat) shapes via `serde_json::Value`
+      branching. Map errors per REQ-F-008 (auth, 404 with multilingual
+      hint, generic non-2xx, connect/timeout, empty) using existing
+      `EmbedError::ProviderError { provider: "huggingface", message }`.
+    status: completed
+    dependencies: []
+    acceptance_criteria:
+      - "src/embed/huggingface.rs compiles and exports HuggingFace struct"
+      - "Default base URL is https://router.huggingface.co/hf-inference/models"
+      - "When base_url is Some(_), no /{model}/pipeline/feature-extraction is appended"
+      - "Response parser handles both [[f32]] and [f32] shapes; returns first vector"
+      - "401/403 → 'huggingface auth failed: check HF_TOKEN scopes (needs Inference Providers permission)'"
+      - "404 → contains both 'not deployed by any Inference Provider' and \"'<model>-multilingual-v1'\""
+      - "No new EmbedError variants added; uses ProviderError + MissingApiKey"
+    completed_at: 2026-04-20T09:53:32Z
+
+  - id: task-002
+    title: "Wire huggingface into EmbedConfig::build and resolve_api_key"
+    description: |
+      Edit `src/embed/mod.rs`. Add `pub mod huggingface;`. Add a
+      `"huggingface" =>` arm to `EmbedConfig::build` that constructs the
+      provider with `(self.api_key, self.model, self.base_url)`. Add a
+      `"huggingface" =>` arm to `resolve_api_key` that returns
+      `HF_TOKEN` first, then `NEO4J_EMBED_API_KEY` fallback, both
+      empty-string filtered (mirrors the existing `openai` arm).
+    status: completed
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "src/embed/mod.rs declares `pub mod huggingface;`"
+      - "EmbedConfig::build matches \"huggingface\" → HuggingFace::new(...)"
+      - "resolve_api_key(\"huggingface\") returns HF_TOKEN when set and non-empty"
+      - "resolve_api_key(\"huggingface\") falls back to NEO4J_EMBED_API_KEY when HF_TOKEN is unset OR empty"
+      - "resolve_api_key(\"huggingface\") returns None when neither is set/non-empty"
+      - "cargo build clean"
+    completed_at: 2026-04-20T10:05:00Z
+
+  - id: task-003
+    title: "Unit tests for resolve_api_key huggingface arm"
+    description: |
+      Extend `tests/unit.rs` per the existing re-implementation pattern.
+      Update the local `resolve_api_key` re-impl to include the new
+      huggingface arm, then add 4 tests using injected env-lookup closures
+      (avoid `std::env::set_var` to prevent parallelism issues — see
+      task-009 of embedding-support for the established pattern).
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Test: huggingface with HF_TOKEN=tok → Some(\"tok\")"
+      - "Test: huggingface with only NEO4J_EMBED_API_KEY=fb → Some(\"fb\")"
+      - "Test: huggingface with neither set → None"
+      - "Test: huggingface with HF_TOKEN=\"\" and NEO4J_EMBED_API_KEY=fb → Some(\"fb\")"
+      - "All existing unit tests still pass"
+    completed_at: 2026-04-20T10:15:00Z
+
+  - id: task-004
+    title: "Non-ignored integration tests for missing key + CLI flag positions"
+    description: |
+      Extend `tests/integration.rs`. Update `embed_env_clean()` (line 924)
+      to also `env_remove("HF_TOKEN")`. Add two tests:
+      `huggingface_missing_api_key_errors` asserts stderr contains the
+      exact `missing API key for huggingface: set HF_TOKEN` string. Then
+      `huggingface_cli_flags_before_subcommand` puts
+      `--embed-provider huggingface --embed-model anything` BEFORE the
+      `embed` subcommand and verifies the missing-API-key error fires
+      (proves global=true flag wiring still works for the new provider —
+      mirrors the AGENTS.md "CLI Architecture" rule).
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "embed_env_clean() now also strips HF_TOKEN"
+      - "huggingface_missing_api_key_errors passes without any external services"
+      - "huggingface_cli_flags_before_subcommand passes with flags BEFORE subcommand"
+      - "Both tests assert the exact REQ-F-008 missing-key string"
+      - "All existing integration tests still pass"
+    completed_at: 2026-04-20T10:30:00Z
+
+  - id: task-005
+    title: "Optional ignored integration test against real HF serverless"
+    description: |
+      Add `huggingface_serverless_real_call` as an `#[ignore]` test in
+      `tests/integration.rs`. Skip with `eprintln!` when `HF_TEST_TOKEN`
+      env is unset (paralleling the `neo4j_available()` /
+      `ollama_available()` pattern). When set, run
+      `--embed-provider huggingface --embed-model
+      sentence-transformers/clip-ViT-B-32-multilingual-v1 embed "hello"`
+      and assert the JSON output is a 512-element array of floats.
+      This test is opt-in and not part of CI defaults.
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Test is gated by #[ignore] and HF_TEST_TOKEN env presence"
+      - "Skips gracefully (eprintln!) when HF_TEST_TOKEN unset"
+      - "When run with valid token, asserts vector.len() == 512"
+      - "Uses sentence-transformers/clip-ViT-B-32-multilingual-v1"
+      - "cargo test -- --ignored picks it up alongside Neo4j+Ollama tests"
+    completed_at: 2026-04-20T10:45:00Z
+
+  - id: task-006
+    title: "Update README with HuggingFace provider docs and clip caveat"
+    description: |
+      Add `huggingface` to the providers in the Embeddings section of
+      `README.md`. Add an `.env` example showing
+      `NEO4J_EMBED_PROVIDER=huggingface`,
+      `NEO4J_EMBED_MODEL=sentence-transformers/clip-ViT-B-32-multilingual-v1`,
+      and `HF_TOKEN=hf_...`. Document the clip-ViT-B-32 caveat clearly:
+      the bare model is not serverless on HF, so the user must either
+      switch to the multilingual variant OR deploy a dedicated HF
+      Inference Endpoint and override `--embed-base-url`. Add `HF_TOKEN`
+      row to the Configuration table.
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Embeddings section lists huggingface alongside openai and ollama"
+      - "OpenAI / Ollama / HuggingFace .env recipes all present"
+      - "clip-ViT-B-32 caveat documented with both workarounds"
+      - "Configuration table includes HF_TOKEN row (no flag, required-for-hf default)"
+      - "README markdown renders cleanly"
+    completed_at: 2026-04-20T11:00:00Z
+
+  - id: task-007
+    title: "Update both SKILL.md copies in sync with HuggingFace mention"
+    description: |
+      Per AGENTS.md, `skills/neo4j-query/SKILL.md` and
+      `.claude/skills/neo4j-query/SKILL.md` MUST stay byte-identical.
+      Add `huggingface` to the provider list in the embeddings
+      section of both files. Verify with `diff` before committing.
+    status: completed
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Both SKILL.md files mention huggingface in the embeddings section"
+      - "`diff skills/neo4j-query/SKILL.md .claude/skills/neo4j-query/SKILL.md` produces no output"
+      - "Cargo.toml version field UNCHANGED"
+      - "cargo build still succeeds (SKILL.md is include_str!'d into the binary)"
+    completed_at: 2026-04-20T11:15:00Z
