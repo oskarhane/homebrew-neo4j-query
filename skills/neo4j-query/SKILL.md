@@ -129,6 +129,16 @@ export NEO4J_EMBED_MODEL=all-minilm   # after: ollama pull all-minilm
 neo4j-query -P q:embed='hello' 'RETURN size($q) AS dims'
 ```
 
+HuggingFace example (serverless Inference API by default; `HF_TOKEN` needs **Inference Providers** permission):
+
+```bash
+export NEO4J_EMBED_PROVIDER=huggingface
+export NEO4J_EMBED_MODEL=sentence-transformers/clip-ViT-B-32-multilingual-v1
+export HF_TOKEN=hf_...
+```
+
+Not all models are on serverless (e.g. bare `clip-ViT-B-32` isn't). For a dedicated HF Inference Endpoint, set `NEO4J_EMBED_BASE_URL=https://<endpoint>.endpoints.huggingface.cloud` — the CLI POSTs directly to that URL (model-locked, no path append).
+
 Use the `embed` subcommand to preview a vector without hitting Neo4j: `neo4j-query embed 'hello'` (JSON array) or `--format raw` for newline-separated floats.
 
 ## Tips
