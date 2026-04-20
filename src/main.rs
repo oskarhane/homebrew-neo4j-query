@@ -465,10 +465,39 @@ async fn run_schema(
         an.cmp(bn)
     });
 
+    // 5. Get constraints
+    let constraint_rows = run_cypher(
+        client,
+        url,
+        user,
+        password,
+        "SHOW CONSTRAINTS YIELD name, type, entityType, labelsOrTypes, properties, ownedIndex, propertyType",
+    )
+    .await?;
+
+    let mut constraints: Vec<Value> = Vec::new();
+    for row in &constraint_rows {
+        let mut entry = Map::new();
+        insert_if_present(&mut entry, "name", row.get("name"));
+        insert_if_present(&mut entry, "type", row.get("type"));
+        insert_if_present(&mut entry, "entityType", row.get("entityType"));
+        insert_if_present(&mut entry, "labelsOrTypes", row.get("labelsOrTypes"));
+        insert_if_present(&mut entry, "properties", row.get("properties"));
+        insert_if_present(&mut entry, "ownedIndex", row.get("ownedIndex"));
+        insert_if_present(&mut entry, "propertyType", row.get("propertyType"));
+        constraints.push(Value::Object(entry));
+    }
+    constraints.sort_by(|a, b| {
+        let an = a.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let bn = b.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        an.cmp(bn)
+    });
+
     Ok(json!({
         "nodes": node_list,
         "relationships": relationships,
         "indexes": indexes,
+        "constraints": constraints,
     }))
 }
 

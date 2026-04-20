@@ -20,3 +20,25 @@ Key Decisions:
 - options passed through as opaque Value so vector/fulltext config surfaces
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Add SHOW CONSTRAINTS query + constraints array to run_schema
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Extended run_schema in src/main.rs w/ 5th step issuing SHOW CONSTRAINTS via
+existing run_cypher. Each row mapped to JSON object (name/type/entityType/
+labelsOrTypes/properties/ownedIndex/propertyType) via insert_if_present helper
+(reused from task-001) for null/empty field elision. Array sorted by name
+ascending, attached under `constraints` key sibling to nodes/relationships/
+indexes. Constraint type passes through unchanged.
+
+Files Changed:
+- src/main.rs (modified: added SHOW CONSTRAINTS block after indexes block)
+
+Key Decisions:
+- Reused insert_if_present helper from task-001 (same elision pattern)
+- Same sort-by-name-asc pattern as indexes
+
+Next Task: task-003
