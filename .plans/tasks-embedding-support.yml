@@ -31,7 +31,7 @@ tasks:
       `main.rs` keeps clap root, `load_env`, query execution, retries,
       `run_schema*`, `run_query_mode`, `main`. All existing tests must pass
       unchanged.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -40,7 +40,7 @@ tasks:
       - "cargo test passes with zero new or modified tests"
       - "cargo clippy clean"
       - "cargo fmt --check clean"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-003
     title: "Implement ParamSpec enum and parse_param with :modifier support"

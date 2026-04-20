@@ -17,3 +17,31 @@ Key Decisions:
 - No wiremock or other dev-deps added
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Refactor main.rs into module layout with no behavior change
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Mechanical split of src/main.rs into REQ-NF-001 module layout. parse_param_value
+and parse_params moved verbatim to src/params.rs. Created stub files for
+embed/{mod,openai,ollama}.rs and commands/{mod,embed}.rs for later tasks. No
+behavior change; all existing tests pass verbatim.
+
+Files Changed:
+- src/main.rs (modified — mod decls + params import; removed param fn bodies)
+- src/params.rs (created — parse_param_value, parse_params)
+- src/embed/mod.rs (created — stub, declares openai + ollama submodules)
+- src/embed/openai.rs (created — stub)
+- src/embed/ollama.rs (created — stub)
+- src/commands/mod.rs (created — stub, declares embed submodule)
+- src/commands/embed.rs (created — stub)
+
+Key Decisions:
+- Stub modules use #[allow(dead_code)] + pub mod so later tasks can drop in
+  code without churn on main.rs.
+- parse_param_value re-exported indirectly via parse_params; kept pub in
+  params.rs for task-003 extension.
+
+Next Task: task-003

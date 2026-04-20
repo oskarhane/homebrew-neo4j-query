@@ -1,6 +1,10 @@
+mod commands;
+mod embed;
+mod params;
 mod skill;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use params::parse_params;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Read};
@@ -142,38 +146,6 @@ fn resolve_query(arg: Option<String>) -> Result<String, String> {
         "no query provided. Usage: neo4j-query \"CYPHER QUERY\" or echo \"QUERY\" | neo4j-query"
             .into(),
     )
-}
-
-fn parse_param_value(v: &str) -> Value {
-    if v == "true" {
-        return Value::Bool(true);
-    }
-    if v == "false" {
-        return Value::Bool(false);
-    }
-    if v == "null" {
-        return Value::Null;
-    }
-    if let Ok(n) = v.parse::<i64>() {
-        return Value::Number(n.into());
-    }
-    if let Ok(n) = v.parse::<f64>() {
-        if let Some(num) = serde_json::Number::from_f64(n) {
-            return Value::Number(num);
-        }
-    }
-    Value::String(v.to_string())
-}
-
-fn parse_params(pairs: &[String]) -> Result<Map<String, Value>, String> {
-    let mut map = Map::new();
-    for pair in pairs {
-        let (k, v) = pair
-            .split_once('=')
-            .ok_or_else(|| format!("invalid param format '{pair}', expected key=value"))?;
-        map.insert(k.to_string(), parse_param_value(v));
-    }
-    Ok(map)
 }
 
 fn truncate_arrays(value: &mut Value, threshold: usize, replacer: &dyn Fn(usize) -> Value) {
