@@ -152,10 +152,11 @@ impl EmbedConfig {
     #[allow(dead_code)]
     pub fn build(self) -> Result<Box<dyn EmbedProvider>, EmbedError> {
         match self.provider.as_str() {
-            "openai" => Err(EmbedError::ProviderError {
-                provider: "openai",
-                message: "openai provider not yet implemented".to_string(),
-            }),
+            "openai" => {
+                let provider =
+                    openai::OpenAi::new(self.api_key, self.model, self.dimensions, self.base_url)?;
+                Ok(Box::new(provider))
+            }
             "ollama" => Err(EmbedError::ProviderError {
                 provider: "ollama",
                 message: "ollama provider not yet implemented".to_string(),

@@ -102,3 +102,33 @@ Key Decisions:
   replace these bodies with real providers without changing callers.
 
 Next Task: task-005
+
+================================================================================
+TASK-005: Implement OpenAI embedding provider
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Implemented OpenAi provider in src/embed/openai.rs. POSTs to
+{base_url}/embeddings with bearer auth and body {input, model, dimensions?}.
+Default base URL https://api.openai.com/v1. new() rejects missing/empty
+api_key with MissingApiKey {openai, OPENAI_API_KEY}. Non-2xx -> ProviderError
+"HTTP <status>: <body>". Empty data[] -> ProviderError("empty response").
+Wired into EmbedConfig::build() replacing the openai stub; ollama stub still
+in place for task-006.
+
+Files Changed:
+- src/embed/openai.rs (real impl)
+- src/embed/mod.rs (build() wires OpenAi)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Kept serde Deserialize types private to file; only `embedding: Vec<f32>` is
+  extracted (other OpenAI fields like `object`, `usage` are ignored).
+- trim_end_matches('/') on base_url so `--embed-base-url
+  https://api.openai.com/v1/` doesn't double-slash.
+- Filter empty api_key/base_url the same way resolve_api_key does to keep
+  `.env` placeholder behaviour consistent.
+- dimensions only added to JSON body when Some; OpenAI errors if `null` sent.
+
+Next Task: task-006

@@ -95,7 +95,7 @@ tasks:
       `EmbedError::MissingApiKey { provider: "openai", env_var:
       "OPENAI_API_KEY" }`. Non-2xx response returns
       `EmbedError::ProviderError` with status + body.
-    status: pending
+    status: completed
     dependencies:
       - task-004
     acceptance_criteria:
@@ -104,7 +104,7 @@ tasks:
       - "Non-success status produces ProviderError with status and body"
       - "Empty data array produces ProviderError(\"empty response\")"
       - "model() and dimensions() accessors work"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-006
     title: "Implement Ollama embedding provider"
