@@ -198,7 +198,7 @@ tasks:
       runs `ollama pull all-minilm` against the container. Update the
       GitHub Actions workflow to start Ollama, run the pull, then execute
       `cargo test -- --ignored`. No Docker-volume caching in v1.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -207,7 +207,7 @@ tasks:
       - "CI workflow runs Ollama + Neo4j together before --ignored tests"
       - "Local run: `docker compose -f tests/docker-compose.yml up -d` followed by pull step works"
       - "No actions/cache used for Ollama volumes in v1"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-011
     title: "Integration tests against real Ollama"

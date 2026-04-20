@@ -278,3 +278,35 @@ Key Decisions:
   the only clean path.
 
 Next Task: task-010
+
+================================================================================
+TASK-010: Add Ollama service to docker-compose and CI workflow
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added pinned ollama/ollama:0.5.4 service to tests/docker-compose.yml and
+.github/workflows/ci.yml. New CI step "Pull all-minilm into Ollama" runs
+`docker exec ${{ job.services.ollama.id }} ollama pull all-minilm` before
+the integration test step. Added tests/pull-ollama-models.sh for local
+dev parity. No actions/cache used for the Ollama volume in v1.
+
+Files Changed:
+- tests/docker-compose.yml (+ollama service, pinned 0.5.4, healthcheck)
+- tests/pull-ollama-models.sh (new, +x, docker exec pull script)
+- .github/workflows/ci.yml (+ollama service + pull step)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+- .plans/progress-embedding-support.txt (this entry)
+
+Key Decisions:
+- Pinned ollama/ollama:0.5.4 rather than :latest for CI reproducibility.
+- Kept GH Actions `services:` block (parallel to neo4j) instead of
+  switching to docker-compose in CI — minimal churn to existing workflow.
+- `${{ job.services.ollama.id }}` resolves to the service container id so
+  `docker exec` hits the correct container without name-scheme guessing.
+- Healthcheck uses `ollama list` (cheap, no network, returns non-zero when
+  daemon not ready) rather than hitting the HTTP port directly.
+- Local helper script defaults CONTAINER=tests-ollama-1 (compose default
+  project name = parent dir `tests`) with OLLAMA_CONTAINER override.
+
+Next Task: task-011
