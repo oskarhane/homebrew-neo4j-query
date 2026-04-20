@@ -51,7 +51,7 @@ tasks:
       existing type coercion for literals by applying `parse_param_value` to
       the literal arm. Error on unknown modifiers with the exact string
       `"unknown param modifier: :<name>"`.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -61,7 +61,7 @@ tasks:
       - "parse_param('v:foo=x') errors with 'unknown param modifier: :foo'"
       - "parse_param('expr=a=b') preserves value with embedded '='"
       - "parse_param('url=http://x') does NOT treat 'http' as a modifier (only key-side ':' splits)"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-004
     title: "Implement EmbedProvider trait, EmbedError, EmbedCliArgs, EmbedConfig"

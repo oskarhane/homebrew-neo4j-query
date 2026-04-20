@@ -45,3 +45,29 @@ Key Decisions:
   params.rs for task-003 extension.
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Implement ParamSpec enum and parse_param with :modifier support
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Added ParamSpec { Literal(Value), Embed(String) } and parse_param(&str) in
+src/params.rs. Key-side split_once(':') isolates the modifier; value-side is
+left untouched so values with ':' or '=' round-trip unchanged. Literals reuse
+parse_param_value for type coercion. Unknown modifiers produce the exact
+REQ-F-011 error "unknown param modifier: :<name>". Both new items are
+#[allow(dead_code)] until wired in by task-007/task-008.
+
+Files Changed:
+- src/params.rs (added ParamSpec enum + parse_param fn)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Used split_once on key_part (not raw) so only KEY-side ':' splits; URLs in
+  values like http://x are untouched.
+- Literal arm calls parse_param_value verbatim — preserves all existing
+  coercion semantics.
+- #[allow(dead_code)] matches the stub-module convention set in task-002.
+
+Next Task: task-004

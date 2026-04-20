@@ -1,5 +1,30 @@
 use serde_json::{Map, Value};
 
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParamSpec {
+    Literal(Value),
+    Embed(String),
+}
+
+#[allow(dead_code)]
+pub fn parse_param(raw: &str) -> Result<(String, ParamSpec), String> {
+    let (key_part, value) = raw
+        .split_once('=')
+        .ok_or_else(|| format!("invalid param format '{raw}', expected key=value"))?;
+    if let Some((name, modifier)) = key_part.split_once(':') {
+        match modifier {
+            "embed" => Ok((name.to_string(), ParamSpec::Embed(value.to_string()))),
+            other => Err(format!("unknown param modifier: :{other}")),
+        }
+    } else {
+        Ok((
+            key_part.to_string(),
+            ParamSpec::Literal(parse_param_value(value)),
+        ))
+    }
+}
+
 pub fn parse_param_value(v: &str) -> Value {
     if v == "true" {
         return Value::Bool(true);
