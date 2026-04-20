@@ -39,7 +39,7 @@ tasks:
     title: "Document database block in README and both SKILL.md copies"
     description: |
       Update the README.md schema section to mention the new top-level `database` block (neo4jVersion, edition, defaultCypherVersion). Mirror the same note in both agent-facing copies: `skills/neo4j-query/SKILL.md` (compile-time embed source) and `.claude/skills/neo4j-query/SKILL.md` (developer copy). Call out that `defaultCypherVersion` tells the agent which vector-index syntax to use (Cypher 5 vs Cypher 25). Keep wording consistent across the three files.
-    status: pending
+    status: completed
     dependencies:
       - task-001
     acceptance_criteria:
@@ -48,4 +48,4 @@ tasks:
       - ".claude/skills/neo4j-query/SKILL.md matches skills/neo4j-query/SKILL.md"
       - "Wording is consistent across the three files"
       - "cargo build remains clean (SKILL.md is compile-time embedded)"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z

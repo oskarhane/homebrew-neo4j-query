@@ -59,3 +59,32 @@ Feedback:
 - cargo test -- --ignored schema_command: 1 passed (fresh neo4j:5 container)
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Document database block in README and both SKILL.md copies
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Docs-only. README schema subcommand row updated + new "### `schema`
+database block" subsection added listing 3 fields (neo4jVersion, edition,
+defaultCypherVersion) + Cypher-dialect implication note. Both SKILL.md
+copies (skills/ + .claude/skills/) got matching `database` bullet + same
+Cypher-dialect note. Wording consistent across all 3 files.
+
+Files Changed:
+- README.md (schema row + new subsection)
+- skills/neo4j-query/SKILL.md (bullet + note)
+- .claude/skills/neo4j-query/SKILL.md (identical to above)
+- .plans/tasks-schema-database-version-info.yml (task-003 -> completed)
+
+Key Decisions:
+- PR #8's "Cypher 25 vs Cypher 5" subsection not on this branch — docs
+  stand alone, mention the implication w/o assuming that subsection.
+- SKILL.md copies byte-identical (same diff hunk applied to both).
+
+Feedback:
+- cargo build: clean
+- cargo fmt --check: clean
+
+Next Task: All tasks complete

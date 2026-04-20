@@ -208,11 +208,21 @@ Embedding configuration is opt-in. Unset `NEO4J_EMBED_PROVIDER` means the CLI ne
 
 | Command              | Description |
 |----------------------|-------------|
-| `schema`             | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), connection paths, plus `indexes` and `constraints` |
+| `schema`             | Introspect the database schema: top-level `database` block (neo4jVersion, edition, defaultCypherVersion) followed by node labels, relationship types, properties (with types and mandatory flags), connection paths, plus `indexes` and `constraints` |
 | `embed [TEXT]`       | Embed text via the configured provider; reads stdin when `TEXT` is omitted. Use `--format json` (default) or `--format raw` (one float per line) |
 | `skill install [--agent <name>]` | Install the neo4j-query skill for detected AI agents (or a specific one) |
 | `skill remove [--agent <name>]`  | Remove the neo4j-query skill from AI agents (or a specific one) |
 | `skill list`         | List all known AI agents and skill installation status |
+
+### `schema` database block
+
+`schema` emits a top-level `database` block with three fields:
+
+- `neo4jVersion` — e.g. `5.26.0` (from `CALL dbms.components()`)
+- `edition` — `community` or `enterprise`
+- `defaultCypherVersion` — `5` or `25` (from `SHOW SETTINGS`, falls back to `5` on older servers)
+
+`defaultCypherVersion` tells the agent which Cypher dialect the server defaults to, which matters for version-specific syntax (e.g. vector-index DDL differs between Cypher 5 and Cypher 25).
 
 ## Output
 
