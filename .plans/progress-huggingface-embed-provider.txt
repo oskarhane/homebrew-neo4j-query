@@ -59,3 +59,25 @@ Key Decisions:
 
 Next Task: task-003
 
+================================================================================
+TASK-003: Unit tests for resolve_api_key huggingface arm
+Date: 2026-04-20T10:15:00Z
+================================================================================
+
+Summary:
+Added huggingface arm to tests/unit.rs `resolve_api_key_fake` re-impl mirroring
+the openai pattern (HF_TOKEN -> NEO4J_EMBED_API_KEY, empty-string filter). Added
+4 REQ-T-001 tests using injected env closures -- no std::env::set_var. 75/75
+unit tests pass; clippy + fmt clean.
+
+Files Changed:
+- tests/unit.rs (resolve_api_key_fake huggingface arm + 4 tests)
+
+Key Decisions:
+- Reused the existing injected-closure pattern established by the openai tests
+  (resolve_api_key_openai_*). Parallelism-safe; no real env mutation.
+- Test names parallel the openai naming: hf_token_wins / falls_back_to_embed_key
+  / neither_set_none / empty_hf_token_falls_back.
+
+Next Task: task-004
+

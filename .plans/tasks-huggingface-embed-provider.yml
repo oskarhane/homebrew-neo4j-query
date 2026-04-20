@@ -60,7 +60,7 @@ tasks:
       huggingface arm, then add 4 tests using injected env-lookup closures
       (avoid `std::env::set_var` to prevent parallelism issues — see
       task-009 of embedding-support for the established pattern).
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -69,7 +69,7 @@ tasks:
       - "Test: huggingface with neither set → None"
       - "Test: huggingface with HF_TOKEN=\"\" and NEO4J_EMBED_API_KEY=fb → Some(\"fb\")"
       - "All existing unit tests still pass"
-    completed_at: null
+    completed_at: 2026-04-20T10:15:00Z
 
   - id: task-004
     title: "Non-ignored integration tests for missing key + CLI flag positions"
