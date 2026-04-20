@@ -293,3 +293,22 @@ tasks:
       - "Ollama example present"
       - "Mentions -P name:embed=... syntax explicitly"
     completed_at: 2026-04-20T00:00:00Z
+
+  - id: task-015
+    title: "Add `embed` subcommand row to README Subcommands table"
+    description: |
+      The README "Subcommands" table (currently lines 178-185) lists
+      `schema`, `skill install/remove/list` but not the new `embed`
+      subcommand. Add a row describing `embed [TEXT]` with a short
+      description mentioning stdin fallback and `--format json|raw`.
+      Keep the existing table formatting consistent.
+    status: pending
+    dependencies:
+      - task-007
+      - task-013
+    acceptance_criteria:
+      - "README Subcommands table includes an `embed` row"
+      - "Row mentions stdin fallback and --format json|raw"
+      - "Existing rows (schema, skill install/remove/list) unchanged"
+      - "Markdown table renders cleanly"
+    completed_at: null
