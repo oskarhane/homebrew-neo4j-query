@@ -71,3 +71,34 @@ Key Decisions:
 - #[allow(dead_code)] matches the stub-module convention set in task-002.
 
 Next Task: task-004
+
+================================================================================
+TASK-004: Implement EmbedProvider trait, EmbedError, EmbedCliArgs, EmbedConfig
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Filled out src/embed/mod.rs with async EmbedProvider trait (Send+Sync via
+async-trait), EmbedError enum (thiserror) with MissingApiKey / NotConfigured
+/ ModelNotSet / UnknownProvider / Http / ProviderError, EmbedCliArgs (clap
+Args with NEO4J_EMBED_* env bindings), EmbedConfig with from_sources /
+require / build, and resolve_api_key helper (OPENAI_API_KEY → NEO4J_EMBED_API_KEY
+fallback for openai; None for ollama). build() stubs out provider wiring for
+tasks 5/6. All #[allow(dead_code)] until query mode + subcommand wire-in.
+
+Files Changed:
+- src/embed/mod.rs (trait, errors, clap args, config)
+- .plans/tasks-embedding-support.yml (status/completed_at)
+
+Key Decisions:
+- Added dedicated ModelNotSet variant so REQ-F-011 error "NEO4J_EMBED_MODEL
+  not set" matches exactly; wrapping it in ProviderError would have prefixed
+  "embed error:" and broken the exact-match tests planned for task-009.
+- EmbedCliArgs derives Default so query mode can construct a no-op value when
+  not embedding, avoiding Option<EmbedCliArgs> plumbing later.
+- resolve_api_key filters empty strings to treat `OPENAI_API_KEY=` identically
+  to unset — matches user expectation for .env placeholders.
+- build() returns ProviderError stubs for openai/ollama today; tasks 5/6
+  replace these bodies with real providers without changing callers.
+
+Next Task: task-005

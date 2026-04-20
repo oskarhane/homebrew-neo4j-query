@@ -73,7 +73,7 @@ tasks:
       `NEO4J_EMBED_*` env var), and `EmbedConfig::from_sources` + `build`
       factory. Implement `resolve_api_key` with `OPENAI_API_KEY` →
       `NEO4J_EMBED_API_KEY` fallback for OpenAI; Ollama gets None.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -83,7 +83,7 @@ tasks:
       - "EmbedConfig::from_sources returns Ok(None) when no provider set"
       - "EmbedConfig::from_sources returns Err when provider set but model missing"
       - "CLI flag overrides env var in from_sources precedence tests"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z
 
   - id: task-005
     title: "Implement OpenAI embedding provider"
