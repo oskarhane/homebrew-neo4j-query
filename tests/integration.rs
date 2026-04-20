@@ -1119,3 +1119,45 @@ fn query_embed_cli_flags_before_query() {
     .stderr(predicate::str::contains("ollama unreachable"))
     .stderr(predicate::str::contains(UNREACHABLE_OLLAMA));
 }
+
+// --- Optional live HuggingFace serverless call (opt-in) ---
+//
+// Gated on HF_TEST_TOKEN env rather than plain HF_TOKEN so a dev with a
+// shell-exported HF_TOKEN doesn't accidentally trigger a paid request.
+// Mirrors the neo4j_available() / ollama_available() skip pattern.
+
+/// clip-ViT-B-32-multilingual-v1 returns 512-dim vectors.
+const CLIP_MULTILINGUAL_DIMS: usize = 512;
+
+#[test]
+#[ignore]
+fn huggingface_serverless_real_call() {
+    let token = match std::env::var("HF_TEST_TOKEN") {
+        Ok(t) if !t.is_empty() => t,
+        _ => {
+            eprintln!("skipping: HF_TEST_TOKEN not set");
+            return;
+        }
+    };
+    let mut c = embed_env_clean();
+    c.env("HF_TOKEN", token);
+    let output = c
+        .args([
+            "--embed-provider",
+            "huggingface",
+            "--embed-model",
+            "sentence-transformers/clip-ViT-B-32-multilingual-v1",
+            "embed",
+            "hello",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "embed failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let parsed: Vec<f32> = serde_json::from_str(stdout.trim()).expect("valid JSON array of floats");
+    assert_eq!(parsed.len(), CLIP_MULTILINGUAL_DIMS);
+}

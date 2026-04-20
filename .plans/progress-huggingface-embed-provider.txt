@@ -108,3 +108,30 @@ Key Decisions:
 
 Next Task: task-005
 
+================================================================================
+TASK-005: Optional ignored integration test against real HF serverless
+Date: 2026-04-20T10:45:00Z
+================================================================================
+
+Summary:
+Added #[ignore] integration test huggingface_serverless_real_call. Gated on
+HF_TEST_TOKEN env (not plain HF_TOKEN) to prevent shell-exported tokens from
+triggering live paid requests accidentally. Skips with eprintln! when unset,
+mirroring neo4j_available/ollama_available. When set, runs --embed-provider
+huggingface --embed-model sentence-transformers/clip-ViT-B-32-multilingual-v1
+embed "hello" and asserts the JSON output is a 512-element Vec<f32>. Verified
+skip path works via `cargo test huggingface_serverless_real_call -- --ignored`.
+31/31 non-ignored integration + 75/75 unit still green. clippy + fmt clean.
+
+Files Changed:
+- tests/integration.rs (new const CLIP_MULTILINGUAL_DIMS + new #[ignore] test)
+
+Key Decisions:
+- HF_TEST_TOKEN gate (not HF_TOKEN) matches PRD REQ-T-005 intent and avoids
+  surprise charges for devs with shell-level HF_TOKEN set.
+- Reused embed_env_clean() then c.env("HF_TOKEN", token) to inject only the
+  test token into the subprocess env (embed_env_clean strips HF_TOKEN first).
+- Const CLIP_MULTILINGUAL_DIMS = 512 parallels the existing ALL_MINILM_DIMS
+  const used by Ollama live tests.
+
+Next Task: task-006
