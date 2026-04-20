@@ -4,6 +4,7 @@
 // `EmbedConfig` factory. Concrete providers live in sibling submodules
 // (`openai`, `ollama`) and are wired up in later tasks.
 
+pub mod huggingface;
 pub mod ollama;
 pub mod openai;
 
@@ -72,7 +73,7 @@ pub enum EmbedError {
 /// before clap parses).
 #[derive(Args, Debug, Clone, Default)]
 pub struct EmbedCliArgs {
-    /// Embedding provider name (`openai` or `ollama`).
+    /// Embedding provider name (`openai`, `ollama`, or `huggingface`).
     #[arg(long = "embed-provider", global = true, env = "NEO4J_EMBED_PROVIDER")]
     pub provider: Option<String>,
 
@@ -81,7 +82,11 @@ pub struct EmbedCliArgs {
     pub model: Option<String>,
 
     /// Explicit output dimensions (OpenAI only; Ollama ignores).
-    #[arg(long = "embed-dimensions", global = true, env = "NEO4J_EMBED_DIMENSIONS")]
+    #[arg(
+        long = "embed-dimensions",
+        global = true,
+        env = "NEO4J_EMBED_DIMENSIONS"
+    )]
     pub dimensions: Option<u32>,
 
     /// Override provider base URL.
@@ -155,6 +160,15 @@ impl EmbedConfig {
                 let provider = ollama::Ollama::new(self.model, self.dimensions, self.base_url)?;
                 Ok(Box::new(provider))
             }
+            "huggingface" => {
+                let provider = huggingface::HuggingFace::new(
+                    self.api_key,
+                    self.model,
+                    self.dimensions,
+                    self.base_url,
+                )?;
+                Ok(Box::new(provider))
+            }
             other => Err(EmbedError::UnknownProvider(other.to_string())),
         }
     }
@@ -165,6 +179,7 @@ impl EmbedConfig {
 /// - `openai`: `OPENAI_API_KEY` wins, then `NEO4J_EMBED_API_KEY` fallback.
 /// - `ollama`: always `None`; `NEO4J_EMBED_API_KEY` is silently ignored
 ///   per REQ-F-006.
+/// - `huggingface`: `HF_TOKEN` wins, then `NEO4J_EMBED_API_KEY` fallback.
 /// - anything else: `NEO4J_EMBED_API_KEY` if present.
 pub fn resolve_api_key(provider: &str) -> Option<String> {
     match provider {
@@ -177,6 +192,14 @@ pub fn resolve_api_key(provider: &str) -> Option<String> {
                     .filter(|v| !v.is_empty())
             }),
         "ollama" => None,
+        "huggingface" => std::env::var("HF_TOKEN")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .or_else(|| {
+                std::env::var("NEO4J_EMBED_API_KEY")
+                    .ok()
+                    .filter(|v| !v.is_empty())
+            }),
         _ => std::env::var("NEO4J_EMBED_API_KEY")
             .ok()
             .filter(|v| !v.is_empty()),

@@ -26,3 +26,36 @@ Key Decisions:
   — task-001 writes the file only per PRD REQ-F-009 scope split.
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Wire huggingface into EmbedConfig::build and resolve_api_key
+Date: 2026-04-20T10:05:00Z
+================================================================================
+
+Summary:
+Registered new huggingface module via `pub mod huggingface;` in src/embed/mod.rs.
+Added "huggingface" arm to EmbedConfig::build calling HuggingFace::new with
+(api_key, model, dimensions, base_url) — 4-arg signature from task-001 (task
+description listed 3 args but task-001 impl includes `dimensions` for trait
+symmetry; dimensions is accepted-but-ignored per REQ-F-007). Added "huggingface"
+arm to resolve_api_key mirroring openai's empty-filtered OPENAI_API_KEY →
+NEO4J_EMBED_API_KEY pattern: HF_TOKEN → NEO4J_EMBED_API_KEY. Updated doc-comments
+on EmbedCliArgs.provider and resolve_api_key to reference huggingface. Also
+added #[derive(Debug)] to HuggingFace struct (task-001 tests use .unwrap_err()
+which requires T: Debug — surfaced when clippy --all-targets compiled tests).
+
+Files Changed:
+- src/embed/mod.rs (module decl, build arm, resolve_api_key arm, doc-comments)
+- src/embed/huggingface.rs (added #[derive(Debug)] — test compile fix from 001)
+
+Key Decisions:
+- HuggingFace::new called with 4 args not 3: matches task-001 signature; PRD
+  REQ-F-007 says dimensions is CLI-accepted but provider-ignored, kept in
+  signature for trait symmetry.
+- Skipped cargo fmt on src/main.rs (pre-existing fmt drift, out of task scope).
+  Let cargo fmt apply to src/embed/mod.rs only since the task edits that file.
+- No tests added this task; unit tests live in task-003 (resolve_api_key) and
+  task-004 (integration).
+
+Next Task: task-003
+

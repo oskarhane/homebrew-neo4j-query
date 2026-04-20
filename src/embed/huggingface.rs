@@ -34,6 +34,7 @@ use super::{EmbedError, EmbedProvider};
 
 const DEFAULT_BASE_URL: &str = "https://router.huggingface.co/hf-inference/models";
 
+#[derive(Debug)]
 pub struct HuggingFace {
     client: Client,
     api_key: String,
