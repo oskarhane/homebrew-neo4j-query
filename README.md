@@ -208,7 +208,7 @@ Embedding configuration is opt-in. Unset `NEO4J_EMBED_PROVIDER` means the CLI ne
 
 | Command              | Description |
 |----------------------|-------------|
-| `schema`             | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), and connection paths |
+| `schema`             | Introspect the database schema: node labels, relationship types, properties (with types and mandatory flags), connection paths, plus `indexes` and `constraints` |
 | `embed [TEXT]`       | Embed text via the configured provider; reads stdin when `TEXT` is omitted. Use `--format json` (default) or `--format raw` (one float per line) |
 | `skill install [--agent <name>]` | Install the neo4j-query skill for detected AI agents (or a specific one) |
 | `skill remove [--agent <name>]`  | Remove the neo4j-query skill from AI agents (or a specific one) |

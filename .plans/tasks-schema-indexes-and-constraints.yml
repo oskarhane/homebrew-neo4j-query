@@ -53,7 +53,7 @@ tasks:
     title: "Document indexes & constraints in README and SKILL.md copies"
     description: |
       Add a one-line note to the schema section of README.md (~line 211) that `schema` output now includes `indexes` and `constraints`. Mirror the same note in both agent-facing copies: `skills/neo4j-query/SKILL.md` (compile-time embed source) and `.claude/skills/neo4j-query/SKILL.md` (installed copy). Keep wording consistent across all three files.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -61,4 +61,4 @@ tasks:
       - "skills/neo4j-query/SKILL.md mentions indexes and constraints"
       - ".claude/skills/neo4j-query/SKILL.md mentions indexes and constraints"
       - "Wording is consistent across the three files"
-    completed_at: null
+    completed_at: 2026-04-20T00:00:00Z

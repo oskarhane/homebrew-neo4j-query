@@ -35,6 +35,8 @@ neo4j-query schema
 The `schema` subcommand returns a structured TOON object with:
 - **nodes**: every node label with its properties (name, type, mandatory flag)
 - **relationships**: every relationship type with its properties AND `paths` showing which node labels it connects (from → to)
+- **indexes**: every index (name, type, entityType, labelsOrTypes, properties, state, owningConstraint, options)
+- **constraints**: every constraint (name, type, entityType, labelsOrTypes, properties, ownedIndex, propertyType)
 
 Example output:
 ```

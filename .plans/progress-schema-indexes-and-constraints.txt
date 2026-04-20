@@ -71,3 +71,30 @@ Feedback Loops:
 - cargo test -- --ignored schema_command: SKIPPED (local Neo4j on :7474 unreachable)
 
 Next Task: task-004
+
+================================================================================
+TASK-004: Document indexes & constraints in README and SKILL.md copies
+Date: 2026-04-20T00:00:00Z
+================================================================================
+
+Summary:
+Docs-only. README.md schema row (~line 211) now mentions `indexes` and
+`constraints` appended to description. Both SKILL.md copies (skills/... +
+.claude/skills/...) extended bullet list under "schema subcommand returns..."
+with indexes (name/type/entityType/labelsOrTypes/properties/state/
+owningConstraint/options) and constraints (name/type/entityType/
+labelsOrTypes/properties/ownedIndex/propertyType) entries.
+
+Files Changed:
+- README.md (modified: schema row updated)
+- skills/neo4j-query/SKILL.md (modified: 2 bullets added)
+- .claude/skills/neo4j-query/SKILL.md (modified: 2 bullets added)
+
+Key Decisions:
+- Field lists mirror run_schema emit order so agents know what to expect
+- Kept wording style consistent w/ existing nodes/relationships bullets
+
+Feedback Loops:
+- cargo build: ok (SKILL.md embed intact)
+
+Next Task: All tasks complete
